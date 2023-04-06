@@ -1,4 +1,4 @@
--- Proof of concept code, please be wary of using in production as-is
+-- Proof of concept code, nowhere near production-grade, please be wary of using in production as-is
 
 CREATE TABLE [dbo].[pbiRefreshConfig](
 	[datasetName] [nvarchar](50) NULL,
@@ -19,12 +19,17 @@ BEGIN
 UPDATE rc
 SET nextRefresh = rp.refreshDateTime
 FROM pbiRefreshConfig rc
-LEFT JOIN (
-select refreshPolicy, min(date+cast(refreshTime as datetime)) as 'refreshDateTime' from pbiRefreshPolicies
-CROSS JOIN (VALUES(cast(cast(DATEADD(hour,2,getdate()) as date)as datetime)),((cast(cast(DATEADD(hour,26,getdate()) as date)as datetime)))) t(date)
-where date+cast(refreshTime as datetime) > DATEADD(hour,2,getdate())
-group by refreshPolicy
+LEFT JOIN 
+(
+	SELECT refreshPolicy, min(date+cast(refreshTime as datetime)) AS 'refreshDateTime' FROM pbiRefreshPolicies
+	CROSS JOIN 
+	(
+		VALUES(cast(cast(DATEADD(hour,2,getdate()) as date)as datetime)),
+		((cast(cast(DATEADD(hour,26,getdate()) as date)as datetime)))
+	) t(date)
+	WHERE date+cast(refreshTime as datetime) > DATEADD(hour,2,getdate())
+	GROUP BY refreshPolicy
 ) rp on rc.refreshPolicy = rp.refreshPolicy
-where datasetID = @dataset and workspaceID = @workspace
+WHERE datasetID = @dataset and workspaceID = @workspace
 END
 GO
