@@ -732,7 +732,7 @@ By the end: business names, hidden keys, display folders, formats and a descript
     <div class="box rv" style="--d:260ms">
       <span class="tag">Watch for</span>
       <ul class="rules">
-        <li>It renames the columns its own way: <code>CustomerId</code>, <code>CustomerName</code>.</li>
+        <li>It renames the columns well, its own way: <code>Customer Key</code>, <code>Customer Name</code>. Not our way.</li>
         <li>The names are fine. They're just not ours.</li>
         <li>No hidden keys, no descriptions, no folders.</li>
       </ul>
@@ -769,7 +769,7 @@ By the end: business names, hidden keys, display folders, formats and a descript
       </div></li>
       <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
         <span class="k">Watch for</span>
-        <p>It renames its own way, probably CustomerId and CustomerName.</p>
+        <p>It does a decent job: Customer Key, Customer Name. But we say Client, our system fields are CamelCase (ClientKey) and hidden, and it keeps DimCustomer.</p>
       </div></li>
       <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
         <span class="k">Terminal</span>
@@ -778,13 +778,13 @@ By the end: business names, hidden keys, display folders, formats and a descript
       </div></li>
       <li class="step s-say"><button class="no" type="button" aria-label="Mark step done"></button><div>
         <span class="k">Say</span>
-        <p>It knows Power BI. It doesn&#x27;t know us.</p>
+        <p>It&#x27;s good. Good isn&#x27;t the same as ours. It knows Power BI. It doesn&#x27;t know us.</p>
       </div></li>
     </ol>
     <p class="run-f"><b>If it goes wrong:</b> Any rename makes the point, so there&#x27;s little to go wrong.</p>
   </aside>
   <aside class="notes">Stage: reset.ps1 stage-0. Show the field list in Desktop first: DimCustomer, cust_id, TotalSales, Margin as 0.31 with no percent format.
-Run the prompt. It renames its own way, probably CustomerId, CustomerName.
+Run the prompt. It does a decent job, its own way: Customer Key, Customer Name. Point out: we say Client, system fields are ClientKey and hidden, and it kept DimCustomer.
 Say: It knows Power BI. It doesn't know us.
 Then git diff, and reset.</aside>
 </section>
@@ -897,7 +897,7 @@ The consequence: the description is the most important line you write. It's the 
       <span class="tag">Stage 2 · sharp</span>
 <pre class="code">description: … Use when creating, <span class="k">renaming</span>,
   <span class="k">tidying</span>, documenting or reviewing …</pre>
-      <p class="res"><span class="chip go">✓</span>Customer Key, Customer Name, Country, Segment. The table becomes Customer.</p>
+      <p class="res"><span class="chip go">✓</span>ClientKey (hidden), Client Name, Country, Segment. The table becomes Client.</p>
     </div>
     <p class="say rv" style="--d:800ms">Same instructions, different description. That one line is the whole difference.</p>
   </div>
@@ -946,7 +946,7 @@ The consequence: the description is the most important line you write. It's the 
       </div></li>
       <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
         <span class="k">Watch for</span>
-        <p>The skill loads: Customer Key, Customer Name, Country, Segment; the table becomes Customer.</p>
+        <p>The skill loads: ClientKey (hidden), Client Name, Country, Segment; the table becomes Client. Point at Client and ClientKey: no model guesses those.</p>
       </div></li>
       <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
         <span class="k">Terminal</span>
@@ -955,7 +955,7 @@ The consequence: the description is the most important line you write. It's the 
       </div></li>
       <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
         <span class="k">Watch for</span>
-        <p>sourceColumn unchanged; relationships.tmdl and the DAX updated; DimCustomer.tmdl → Customer.tmdl.</p>
+        <p>sourceColumn unchanged; relationships.tmdl and the DAX updated; DimCustomer.tmdl → Client.tmdl.</p>
       </div></li>
       <li class="step s-say"><button class="no" type="button" aria-label="Mark step done"></button><div>
         <span class="k">Say</span>
@@ -966,7 +966,7 @@ The consequence: the description is the most important line you write. It's the 
   </aside>
   <aside class="notes">reset.ps1 stage-1, show SKILL.md: "Helps with Power BI." Run the prompt. Point at the chat: no model-standards line.
 reset.ps1 stage-2, show the new description with the words people type. Same prompt, new conversation. The skill loads.
-Show the diff: sourceColumn unchanged, relationships.tmdl and the DAX updated, the file renamed to Customer.tmdl.
+Show the diff: sourceColumn unchanged, relationships.tmdl and the DAX updated, the file renamed to Client.tmdl.
 If the skill doesn't load: type /model-standards, and say why: it's the description again.</aside>
 </section>
 
