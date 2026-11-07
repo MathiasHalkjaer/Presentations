@@ -1,0 +1,2048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Advanced Agent Skills for Power BI: how a skill is found, references, scripts, hooks, sub-agents and a skill that learns. Mathias Halkjær, Data &amp; AI Builders Conference 2026.">
+<title>Advanced Agent Skills for Power BI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --grad:linear-gradient(90deg,#F05027 0%,#FF455B 33%,#D53B91 66%,#C514B4 100%);
+  --bg:#F8F8F8;--card:#FFFFFF;--tint:#F1EFEF;
+  --text:#1F1F1F;--muted:#57545C;--faint:#8A868C;
+  --line:#E6E3E1;--line-strong:#D6D1CE;--wire:#BDB7B3;
+  --accent:#C514B4;--accent-soft:#FBEAF7;--accent-ink:#4A1042;
+  --stop:#B23C18;--stop-soft:#FBECE5;--go:#2B7A4B;--go-soft:#E8F3EC;
+  --radius:10px;
+  --shadow:0 1px 2px rgba(31,31,31,.05),0 6px 18px rgba(31,31,31,.06);
+  --f-head:"Montserrat","Segoe UI",system-ui,sans-serif;
+  --f-body:"Roboto","Segoe UI",system-ui,sans-serif;
+  --f-mono:"Cascadia Mono","Consolas",ui-monospace,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;background:var(--bg);font-size:clamp(11px,min(1.85vh,1.04vw),22px)}
+body{margin:0;height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--bg);color:var(--text);font-family:var(--f-body);line-height:1.45;overflow:hidden;-webkit-font-smoothing:antialiased;transition:background-color .45s ease,color .45s ease}
+body[data-theme="brand"]{background:var(--grad);color:#fff}
+body::before{content:"";position:fixed;inset:0 0 auto 0;z-index:6;height:4px;background:var(--grad);pointer-events:none}
+body[data-theme="brand"]::before{display:none}
+h1,h2,h3{margin:0;font-family:var(--f-head);font-weight:400;line-height:1.15}
+h4{margin:0;font-family:var(--f-head);font-weight:600;line-height:1.25}
+p{margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #D53B91;outline-offset:3px;border-radius:6px}
+code,.mono{font-family:var(--f-mono);font-variant-ligatures:none}
+.grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ---------- top bar ---------- */
+.topbar,.stage,.bottombar{position:relative;z-index:1}
+.topbar{display:flex;align-items:center;gap:1.6rem;padding:1rem 2.6rem .7rem;border-bottom:1px solid var(--line);transition:border-color .45s ease}
+body[data-theme="brand"] .topbar{border-color:rgba(255,255,255,.26)}
+.brand{flex:none;display:flex;align-items:center;gap:.9rem;text-decoration:none;color:#1F1F1F;transition:opacity .4s ease}
+.brand svg{height:1.15rem;width:auto;display:block}
+.brand span{font-size:.78rem;color:var(--muted);padding-left:.9rem;border-left:1px solid var(--line-strong)}
+body[data-theme="brand"] .brand{opacity:0;pointer-events:none}
+.tabs{margin-left:auto;display:flex;gap:1.5rem;position:relative}
+.tabs a{display:flex;align-items:baseline;gap:.4rem;text-decoration:none;font-family:var(--f-head);font-size:.8rem;color:var(--muted);padding:.35rem 0 .55rem;transition:color .3s ease}
+.tabs a .n{font-size:.62rem;color:var(--faint)}
+.tabs a.done{color:var(--text)}
+.tabs a.done .n::after{content:" ✓";color:var(--accent)}
+.tabs a.on{color:var(--text)}
+.tabs a.on .n{color:var(--accent)}
+body[data-theme="brand"] .tabs a,body[data-theme="brand"] .tabs a .n{color:rgba(255,255,255,.92)}
+.tab-ink{position:absolute;bottom:0;height:2px;background:var(--grad);transition:left .5s var(--ease),width .5s var(--ease),opacity .3s ease;opacity:0}
+
+/* ---------- stage and panels ---------- */
+.stage{overflow:hidden}
+.panel{position:absolute;inset:0;padding:1.7rem 2.6rem 1.2rem;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:1.2rem;opacity:0;visibility:hidden;transition:opacity .3s ease,visibility 0s linear .3s}
+.panel.active{opacity:1;visibility:visible;transition:opacity .45s ease}
+.panel>header{display:grid;grid-template-columns:1fr auto;column-gap:2rem;align-items:start}
+.panel>header>*:not(.demo){grid-column:1}
+.eyebrow{font-size:.68rem;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:.45rem}
+h2{font-size:2.45rem;letter-spacing:-.005em}
+.lead{margin-top:.55rem;font-size:1.08rem;color:var(--muted);max-width:56rem}
+.demo{grid-column:2;grid-row:1/span 3;align-self:start;display:flex;flex-direction:column;align-items:flex-end;gap:.3rem}
+.demo b{display:inline-block;font-family:var(--f-head);font-weight:600;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--grad);padding:.42rem .9rem}
+.demo small{font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+.body{min-height:0;position:relative}
+
+/* reveal */
+.rv{opacity:0;transform:translate(var(--fx,0px),var(--fy,14px))}
+.panel.active .rv{opacity:1;transform:none;transition:opacity .6s ease var(--d,0ms),transform .9s var(--ease) var(--d,0ms)}
+.draw{stroke-dasharray:1;stroke-dashoffset:1}
+.panel.active .draw{stroke-dashoffset:0;transition:stroke-dashoffset .9s var(--ease) var(--d,0ms)}
+
+/* cards */
+.box{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);position:relative;padding:1.1rem 1.25rem}
+.box::before{content:"";position:absolute;top:0;left:0;width:4.5rem;height:3px;background:var(--grad)}
+.box.plain::before{display:none}
+.tag{font-size:.62rem;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin-bottom:.35rem;display:block}
+.box h3{font-size:1.25rem;margin-bottom:.45rem}
+.box p,.box li{font-size:.92rem;color:var(--muted)}
+.box ul{margin:0;padding:0;list-style:none;display:grid;gap:.45rem}
+.box ul.rules li{padding:.5rem 0;border-top:1px solid var(--line);color:var(--text)}
+.box ul.rules li:first-child{border-top:0}
+.chip{display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;border:1px solid var(--line-strong);background:var(--card);border-radius:999px;padding:.22rem .7rem;white-space:nowrap}
+.chip.stop{border-color:var(--stop);color:var(--stop);background:var(--stop-soft)}
+.chip.go{border-color:var(--go);color:var(--go);background:var(--go-soft)}
+.chip.acc{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+
+/* code */
+pre.code{margin:0;font-family:var(--f-mono);font-variant-ligatures:none;font-size:.86rem;line-height:1.55;background:var(--tint);border-radius:8px;padding:.9rem 1.05rem;color:var(--text);white-space:pre;overflow:hidden}
+pre.code .k{color:var(--accent)}
+pre.code .m{color:var(--faint)}
+pre.code .add{color:var(--go)}
+pre.code .hl{display:inline-block;width:100%;background:var(--accent-soft);color:var(--accent-ink);margin:0 -1.05rem;padding:0 1.05rem;box-sizing:content-box}
+.file{font-family:var(--f-mono);font-size:.74rem;color:var(--muted);margin-bottom:.45rem}
+
+/* prompt bar */
+.prompts{display:grid;gap:.5rem;background:var(--accent-soft);border-radius:var(--radius);padding:.75rem 1.1rem}
+.prompt{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:1rem}
+.prompt .tag{margin:0;min-width:4.6rem}
+.prompt code{font-size:.95rem;color:var(--accent-ink)}
+.btn{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--line-strong);background:var(--card);border-radius:999px;padding:.38rem .95rem;font-size:.8rem;cursor:pointer;transition:border-color .2s ease,color .2s ease}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.ok{border-color:var(--go);color:var(--go)}
+.note-line{font-size:.88rem;color:var(--muted)}
+.say{font-family:var(--f-head);font-size:1.5rem;line-height:1.3}
+.say::before{content:"“"}.say::after{content:"”"}
+
+/* ---------- cover ---------- */
+.cover{grid-template-rows:1fr;padding:0 2.6rem}
+.cv{display:grid;grid-template-columns:1.15fr .85fr;gap:4.5rem;align-items:center;padding:0 2.2rem;height:100%}
+.cv-logo svg{height:2.6rem;width:auto;color:#fff;display:block;margin-bottom:2rem}
+.cover .eyebrow{color:#fff;font-weight:700}
+.cover h1{font-size:3.6rem;letter-spacing:-.01em}
+.cover .rule{display:block;width:4.5rem;height:3px;background:#fff;margin:1.6rem 0 1.4rem}
+.cover .sub{font-size:1.15rem;max-width:36rem;color:rgba(255,255,255,.95)}
+.chain{list-style:none;padding:0;margin:1.6rem 0 0;display:flex;flex-wrap:wrap;gap:.5rem .4rem;align-items:center}
+.chain li{border:1px solid rgba(255,255,255,.75);border-radius:999px;padding:.28rem .8rem;font-size:.82rem}
+.chain li+li::before{content:"→";margin:0 .55rem 0 -1.15rem;opacity:.8;position:relative;left:-.3rem}
+.chain li+li{margin-left:1rem}
+.who{margin-top:2.6rem;font-size:.95rem}
+.who b{font-family:var(--f-head);font-weight:500;font-size:1.15rem;display:block}
+.who span{color:rgba(255,255,255,.85)}
+.cv-agenda .cv-ah{font-size:.66rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-bottom:.8rem}
+.cv-row{display:grid;grid-template-columns:3rem 1fr auto;align-items:center;gap:.6rem;padding:.72rem .6rem;border-top:1px solid rgba(255,255,255,.4);text-decoration:none;transition:background-color .25s ease}
+.cv-row:last-child{border-bottom:1px solid rgba(255,255,255,.4)}
+.cv-row:hover{background:rgba(255,255,255,.1)}
+.cv-row .n{font-family:var(--f-head);font-size:1.25rem}
+.cv-row b{font-family:var(--f-head);font-weight:500;font-size:1.02rem;display:block}
+.cv-row small{font-size:.76rem;color:rgba(255,255,255,.9)}
+.slant{position:absolute;right:3.2rem;bottom:0;height:5rem;aspect-ratio:196/269;background:#fff;clip-path:polygon(72.96% 0%,100% 0%,27.04% 100%,0% 100%)}
+
+/* ---------- bottom bar ---------- */
+.bottombar{display:flex;align-items:center;gap:1.2rem;padding:.65rem 2.6rem .8rem;border-top:1px solid var(--line)}
+body[data-theme="brand"] .bottombar{border-color:rgba(255,255,255,.26)}
+body[data-theme="brand"] .bottombar .btn{background:transparent;border-color:rgba(255,255,255,.7);color:#fff}
+.progress{flex:1;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+body[data-theme="brand"] .progress{background:rgba(255,255,255,.3)}
+.progress i{display:block;height:100%;width:0;background:var(--grad);transition:width .5s var(--ease)}
+body[data-theme="brand"] .progress i{background:#fff}
+.count{font-size:.8rem;font-variant-numeric:tabular-nums}
+.count b{font-weight:500}
+.hint{font-size:.74rem;color:var(--muted)}
+body[data-theme="brand"] .hint{color:rgba(255,255,255,.85)}
+
+/* notes drawer */
+.notes{display:none}
+#drawer{position:fixed;left:2.6rem;right:2.6rem;bottom:4.2rem;z-index:20;background:#1F1F1F;color:#F2F2F2;border-radius:var(--radius);padding:1rem 1.3rem;font-size:.92rem;line-height:1.55;box-shadow:0 18px 40px rgba(0,0,0,.35);transform:translateY(1rem);opacity:0;pointer-events:none;transition:opacity .25s ease,transform .3s var(--ease);max-height:45vh;overflow:auto;white-space:pre-line}
+#drawer.open{opacity:1;transform:none;pointer-events:auto}
+#drawer .tag{color:#EF7FDD}
+
+/* ---------- slide-specific ---------- */
+/* hands */
+.hands{list-style:none;margin:0;padding:0;display:grid;align-content:center;height:100%}
+.hands li{display:grid;grid-template-columns:4.2rem 1fr;align-items:center;gap:1.4rem;padding:1.35rem 0;border-top:1px solid var(--line)}
+.hands li:last-child{border-bottom:1px solid var(--line)}
+.hands .n{font-family:var(--f-head);font-size:2.6rem;color:var(--faint)}
+.hands p{font-family:var(--f-head);font-size:1.9rem}
+.hands li.key .n{color:var(--accent)}
+
+/* job */
+.job{display:grid;grid-template-columns:1fr 6rem 1fr;align-items:stretch;align-content:center;height:100%;gap:0}
+.fields{list-style:none;margin:0;padding:0;display:grid;gap:.15rem}
+.fields li{display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:center;font-size:.95rem;padding:.38rem .6rem;border-radius:6px}
+.fields li.t{font-family:var(--f-head);font-weight:600;font-size:1rem;padding-top:.7rem}
+.fields li.c{padding-left:1.7rem}
+.fields li .mono{font-size:.9rem}
+.fields li em{font-style:normal;font-size:.74rem;color:var(--muted)}
+.fields li.bad .mono{color:var(--stop)}
+.job .mid{display:grid;place-items:center;align-content:center;gap:.4rem;color:var(--accent);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;font-weight:500}
+.job .mid svg{width:4rem;height:1.4rem}
+.need{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.9rem}
+
+/* two ways */
+.ways{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 4rem auto auto;align-content:center;column-gap:2.4rem;height:100%}
+.agent{grid-column:1/-1;justify-self:center;background:#1F1F1F;color:#fff;border-radius:var(--radius);padding:.85rem 2.2rem;text-align:center}
+.agent b{font-family:var(--f-head);font-weight:500;font-size:1.2rem;display:block}
+.agent small{font-size:.78rem;color:rgba(255,255,255,.75)}
+.wires{grid-column:1/-1;width:100%;height:100%;overflow:visible}
+.wires path{fill:none;stroke:var(--wire);stroke-width:1.6;vector-effect:non-scaling-stroke}
+.wires path.acc{stroke:var(--accent)}
+.targets{grid-column:2;display:flex;gap:.6rem;margin-top:.9rem;align-items:center}
+
+/* pieces map */
+.pieces{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:1.1rem;height:100%}
+.piece{display:grid;grid-template-rows:auto auto 1fr auto;text-decoration:none;cursor:pointer;transition:transform .25s var(--ease),box-shadow .25s ease}
+.piece:hover{transform:translateY(-3px);box-shadow:0 2px 4px rgba(31,31,31,.06),0 16px 32px -10px rgba(31,31,31,.2)}
+.piece .num{font-family:var(--f-head);font-size:2.4rem;line-height:1}
+.piece h3{margin:.5rem 0 .35rem}
+.piece .where{font-family:var(--f-mono);font-size:.78rem;color:var(--accent);padding-top:.6rem;border-top:1px solid var(--line)}
+
+/* folder */
+.folder{display:grid;grid-template-columns:.8fr 1.5fr .6fr;gap:1.2rem;height:100%;align-content:center}
+.ann{display:grid;grid-template-rows:auto auto;gap:1.2rem;padding-top:2.2rem}
+.ann div{border-left:2px solid var(--accent);padding:.2rem 0 .2rem .8rem}
+.ann div.dim{border-color:var(--wire)}
+.ann b{font-family:var(--f-head);font-weight:600;font-size:.95rem;display:block}
+.ann span{font-size:.82rem;color:var(--muted)}
+
+/* levels */
+.levels{display:grid;grid-template-columns:1fr 18rem;gap:2.4rem;height:100%;align-content:center}
+.lv{display:grid;gap:.9rem}
+.lv>div{border-radius:var(--radius);padding:1rem 1.3rem;display:grid;grid-template-columns:2.6rem 1fr auto;align-items:center;gap:.4rem 1rem}
+.lv .n{font-family:var(--f-head);font-size:1.9rem;grid-column:1;grid-row:1/span 2}
+.lv b{font-family:var(--f-head);font-weight:500;font-size:1.18rem;grid-column:2;grid-row:1}
+.lv .d{font-size:.88rem;grid-column:2;grid-row:2}
+.lv .when{grid-column:3;grid-row:1/span 2;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase}
+.lv .l1{width:52%;background:#1F1F1F;color:#fff}
+.lv .l1 span,.lv .l1 .when{color:rgba(255,255,255,.8)}
+.lv .l2{width:76%;background:#57545C;color:#fff}
+.lv .l2 span,.lv .l2 .when{color:rgba(255,255,255,.85)}
+.lv .l3{width:100%;background:var(--card);box-shadow:var(--shadow)}
+.lv .l3 span,.lv .l3 .when{color:var(--muted)}
+.side{display:grid;gap:1.1rem;align-content:center}
+.side p{font-size:1.02rem;padding-top:1rem;border-top:1px solid var(--line)}
+.side b{font-family:var(--f-head);font-weight:600}
+
+/* vague vs sharp */
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;height:100%;align-content:center}
+.vs .box{display:grid;gap:.8rem;align-content:start}
+.vs .res{display:flex;gap:.6rem;align-items:flex-start;font-size:.98rem;color:var(--text)}
+.vs .say{grid-column:1/-1;margin-top:.6rem}
+
+/* refs */
+.refs{display:grid;grid-template-columns:1fr 5rem 1.1fr;align-items:center;height:100%}
+.refs .mid{display:grid;justify-items:center;gap:.35rem;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:500;text-align:center}
+.pointer{grid-column:1/-1;display:flex;align-items:center;gap:1rem;margin-bottom:1rem;font-size:.95rem}
+.pointer code{background:var(--card);border:1px solid var(--line-strong);border-radius:6px;padding:.25rem .6rem;font-size:.85rem}
+
+/* scripts */
+.scripts{display:grid;grid-template-columns:.8fr 1fr 1fr;grid-auto-rows:minmax(19rem,auto);gap:1.2rem;height:100%;align-content:center}
+.stat{display:grid;align-content:center;justify-items:start;gap:.5rem}
+.stat .big{font-family:var(--f-head);font-size:7.5rem;line-height:.9}
+.stat p{font-size:1rem;color:var(--muted);max-width:14rem}
+.stat code{font-size:.78rem;color:var(--muted)}
+
+/* hooks */
+.hooks{display:grid;grid-template-rows:auto 1fr auto 1fr auto;gap:.5rem;height:100%}
+.lane{display:grid;grid-template-columns:1fr 3.5rem 1.35fr 3.5rem 1fr;align-items:stretch}
+.lane .node{border-radius:var(--radius);padding:.9rem 1.1rem;display:grid;align-content:center;gap:.25rem}
+.lane .act{background:var(--card);box-shadow:var(--shadow)}
+.lane .act b,.lane .res b{font-family:var(--f-head);font-weight:500;font-size:1.05rem}
+.lane .act span{font-size:.82rem;color:var(--muted)}
+.lane .hook{border:2px solid var(--accent);background:var(--card)}
+.lane .hook code{font-size:.98rem;font-weight:600}
+.lane .hook span{font-size:.84rem;color:var(--muted)}
+.lane .res{color:#fff}
+.lane .res span{font-size:.82rem;color:rgba(255,255,255,.88)}
+.lane .res.stop{background:var(--stop)}
+.lane .res.fix{background:#1F1F1F}
+.lane svg{width:100%;height:100%}
+.lane svg line{stroke:var(--wire);stroke-width:2;vector-effect:non-scaling-stroke}
+.lane svg polygon{fill:var(--wire)}
+.lane-h{font-size:.66rem;letter-spacing:.15em;text-transform:uppercase;font-weight:500;color:var(--accent);align-self:end}
+.exit{display:flex;gap:1.6rem;align-items:center;font-size:.9rem;color:var(--muted);padding-top:.8rem;border-top:1px solid var(--line)}
+.exit b{color:var(--text);font-weight:500}
+
+/* sub-agents */
+.subs{display:grid;grid-template-columns:20rem 1fr;gap:2.2rem;height:100%;align-items:center}
+.fan{display:grid;grid-template-columns:9rem 4.5rem 12rem 1fr;grid-template-rows:repeat(4,1fr);row-gap:.7rem;align-items:center}
+.fan .main{grid-column:1;grid-row:1/-1;background:#1F1F1F;color:#fff;border-radius:var(--radius);padding:1.1rem;text-align:center}
+.fan .main b{font-family:var(--f-head);font-weight:500;font-size:1.1rem;display:block}
+.fan .main small{font-size:.74rem;color:rgba(255,255,255,.75)}
+.fan svg{grid-column:2;grid-row:1/-1;width:100%;height:100%}
+.fan svg path{fill:none;stroke:var(--wire);stroke-width:1.6;vector-effect:non-scaling-stroke}
+.fan .sa{grid-column:3;background:var(--card);border:1px solid var(--line-strong);border-radius:var(--radius);padding:.55rem .9rem;height:100%;display:grid;align-content:center}
+.fan .sa small{font-family:var(--f-mono);font-size:.7rem;color:var(--muted)}
+.fan .sa b{font-family:var(--f-head);font-weight:500;font-size:1.05rem}
+.fan .sa.flag{border:2px solid var(--accent)}
+.fan .sum{grid-column:4;font-size:.88rem;color:var(--muted);padding-left:1.1rem}
+.fan .sum.flag{color:var(--accent);font-weight:500}
+
+/* two combos */
+.combo{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;height:100%;align-content:center}
+.combo .box{display:grid;gap:.8rem;align-content:start}
+.combo .box>p{font-size:.98rem;color:var(--text)}
+
+/* loop */
+.loop{display:grid;grid-template-columns:1fr 1fr;gap:2.2rem;height:100%;align-items:center}
+.loop svg{width:100%;height:100%;max-height:28rem}
+.loop svg .ring{fill:none;stroke:var(--wire);stroke-width:2;stroke-dasharray:6 8}
+.loop svg rect{rx:14}
+.loop svg text{font-family:var(--f-head);font-size:19px;font-weight:500;fill:#fff;text-anchor:middle;dominant-baseline:middle}
+.loop svg .dot{fill:var(--accent)}
+
+/* docs */
+.docs{display:grid;grid-template-columns:1.25fr 1fr;gap:1.4rem;align-content:center;height:100%}
+.docs .say{grid-column:1/-1;font-size:1.25rem;margin-top:.4rem}
+.docs .say::before,.docs .say::after{content:none}
+
+/* finale */
+.fin{display:grid;grid-template-columns:1.2fr 1fr;gap:2.4rem;height:100%;align-content:center}
+.checks{list-style:none;margin:0;padding:0;display:grid}
+.checks li{display:grid;grid-template-columns:2.2rem 1fr;align-items:center;gap:.9rem;font-size:1.2rem;padding:.75rem 0;border-top:1px solid var(--line)}
+.checks li:last-child{border-bottom:1px solid var(--line)}
+.checks li i{width:2.2rem;height:2.2rem;border-radius:50%;background:var(--go);color:#fff;display:grid;place-items:center;font-style:normal;font-size:1rem}
+
+/* toolbox */
+.tbl{width:100%;border-collapse:collapse;font-size:1.1rem}
+.tblwrap{display:grid;align-content:center;height:100%}
+.tbl th{font-size:.66rem;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);text-align:left;padding:.5rem .8rem;border-bottom:1px solid var(--line-strong)}
+.tbl td{padding:1.15rem .8rem;border-bottom:1px solid var(--line)}
+.tbl td:first-child{font-family:var(--f-head);font-weight:500;font-size:1.08rem;white-space:nowrap}
+.tbl td:first-child span{font-size:.75rem;color:var(--faint);margin-right:.7rem}
+.tbl td.w{font-family:var(--f-mono);font-size:.86rem;color:var(--accent)}
+.tbl td.std{font-size:.82rem;color:var(--muted)}
+.tbl tr[data-go]{cursor:pointer;transition:background-color .2s ease}
+.tbl tr[data-go]:hover{background:var(--card)}
+
+/* monday */
+.monday{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:minmax(20rem,auto);gap:1.2rem;height:100%;align-content:center}
+.monday .box{display:grid;grid-template-rows:auto auto 1fr;gap:.8rem;padding:1.5rem}
+.monday .num{font-family:var(--f-head);font-size:4.2rem;line-height:1}
+.monday h3{font-size:1.4rem}
+.monday p{font-size:1rem}
+
+/* thanks */
+.thanks{grid-template-rows:1fr}
+.th{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;padding:0 2.2rem}
+.th h1{font-size:3.6rem}
+.th .rows a,.th .rows div{display:grid;grid-template-columns:1fr;gap:.2rem;padding:1rem .2rem;border-top:1px solid rgba(255,255,255,.4);text-decoration:none}
+.th .rows div:last-child{border-bottom:1px solid rgba(255,255,255,.4)}
+.th .rows b{font-family:var(--f-head);font-weight:500;font-size:1.2rem}
+.th .rows span{font-size:.9rem;color:rgba(255,255,255,.92)}
+.th .rows code{font-size:.85rem;color:#fff;opacity:.9}
+
+/* demo slides: the slide on the left, every step to run the demo on the right */
+.panel.has-run{grid-template-columns:minmax(0,1fr) 24rem;column-gap:1.6rem}
+.panel.has-run>header{grid-column:1;grid-row:1}
+.panel.has-run>.body{grid-column:1;grid-row:2/span 2}
+.panel.has-run>.run{grid-column:2;grid-row:1/span 3}
+.run{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:0;overflow:hidden}
+.run-h{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.75rem .95rem .6rem;border-bottom:1px solid var(--line)}
+.run-h b{font-family:var(--f-head);font-weight:600;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--grad);padding:.36rem .75rem}
+.run-h small{font-size:.7rem;color:var(--muted);text-align:right}
+.steps{list-style:none;margin:0;padding:.15rem .95rem;overflow:auto;counter-reset:s;min-height:0}
+.step{counter-increment:s;display:grid;grid-template-columns:1.35rem minmax(0,1fr);gap:.55rem;padding:.42rem 0;border-top:1px solid var(--line)}
+.step:first-child{border-top:0}
+.step .no{width:1.35rem;height:1.35rem;border-radius:50%;border:1px solid var(--line-strong);background:var(--card);font-size:.66rem;font-family:var(--f-head);display:grid;place-items:center;cursor:pointer;padding:0;color:var(--muted)}
+.step .no::before{content:counter(s)}
+.step.done .no{background:var(--go);border-color:var(--go);color:#fff}
+.step.done .no::before{content:"✓"}
+.step.done>div{opacity:.45}
+.step .k{display:block;font-size:.58rem;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:.1rem}
+.step.s-prompt .k{color:var(--accent)}
+.step.s-say .k{color:var(--text)}
+.step p{font-size:.76rem;line-height:1.35;color:var(--text)}
+.step.s-say p{font-family:var(--f-head);font-style:normal}
+.step.s-say p::before{content:"“"}.step.s-say p::after{content:"”"}
+.step.s-watch p,.step.s-desk p{color:var(--muted)}
+.cmd{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:.4rem;background:var(--tint);border-radius:6px;padding:.32rem .35rem .32rem .55rem;margin-top:.22rem}
+.step.s-prompt .cmd{background:var(--accent-soft)}
+.step.s-prompt .cmd code{color:var(--accent-ink)}
+.cmd code{font-size:.7rem;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.cmd .btn{padding:.12rem .55rem;font-size:.66rem}
+.run-f{font-size:.7rem;line-height:1.4;color:var(--muted);padding:.55rem .95rem .7rem;border-top:1px solid var(--line);background:var(--stop-soft)}
+.run-f b{color:var(--stop);font-weight:500}
+
+/* ---------- exercises (opt-in: a button on the slide, or E) ---------- */
+.panel>header{position:relative}
+.ex-btn{position:absolute;top:0;right:0;display:inline-flex;align-items:center;gap:.45rem;border:1px solid var(--accent);background:var(--card);color:var(--accent);border-radius:999px;padding:.3rem .85rem .3rem .35rem;font-size:.74rem;font-weight:500;cursor:pointer;transition:background-color .2s ease}
+.ex-btn:hover{background:var(--accent-soft)}
+.ex-btn i{width:1.35rem;height:1.35rem;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-style:normal;font-size:.72rem}
+#ex-back{position:fixed;inset:0;z-index:29;background:rgba(248,248,248,.7);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s ease}
+#ex{position:fixed;left:2.6rem;right:2.6rem;top:4.4rem;bottom:4.4rem;z-index:30;background:var(--card);border-radius:var(--radius);box-shadow:0 24px 60px rgba(31,31,31,.25);display:grid;grid-template-rows:auto minmax(0,1fr);opacity:0;transform:translateY(14px);pointer-events:none;transition:opacity .25s ease,transform .35s var(--ease)}
+body.ex-open #ex,body.ex-open #ex-back{opacity:1;pointer-events:auto;transform:none}
+.ex-h{display:flex;align-items:center;gap:1rem;padding:.9rem 1.3rem;border-bottom:1px solid var(--line)}
+.ex-h .eyebrow{margin:0}
+.ex-h h3{font-size:1.45rem}
+.ex-h .chip{margin-left:.4rem}
+.ex-h .x{margin-left:auto}
+.ex-b{padding:1.1rem 1.3rem;overflow:auto;min-height:0}
+.ex-b .hint{font-size:.85rem;color:var(--muted);margin-bottom:.9rem;max-width:60rem}
+.ex-b input[type=text],.ex-b textarea{font:inherit;font-family:var(--f-mono);font-size:.9rem;width:100%;border:1px solid var(--line-strong);border-radius:8px;padding:.55rem .7rem;background:var(--card);color:var(--text)}
+.ex-b textarea{resize:none}
+.ex-b input:focus,.ex-b textarea:focus{outline:2px solid #D53B91;outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.55rem 0}
+.chips button{cursor:pointer}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:var(--card);padding:.35rem .9rem;font-size:.8rem;cursor:pointer}
+.seg button.on{background:#1F1F1F;color:#fff}
+.out{font-family:var(--f-mono);font-size:.82rem;line-height:1.5;border-radius:8px;padding:.7rem .9rem;background:var(--tint);white-space:pre-wrap;min-height:3rem}
+.out.stop{background:var(--stop-soft);color:var(--stop)}
+.out.go{background:var(--go-soft);color:var(--go)}
+mark{background:var(--accent-soft);color:var(--accent-ink);border-radius:3px;padding:0 .12em}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
+.lbl{font-size:.62rem;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin:0 0 .4rem}
+
+/* before/after */
+.ba-wrap{display:grid;grid-template-columns:1fr 21rem;gap:1.4rem;align-items:start}
+.ba{position:relative;border-radius:var(--radius);background:var(--tint);user-select:none;cursor:ns-resize;touch-action:none}
+.ba .layer{display:grid;grid-template-columns:1fr;padding:.6rem .9rem}
+.ba .layer.clean{position:absolute;inset:0;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);border-radius:var(--radius);clip-path:inset(0 0 calc(100% - var(--y,40%)) 0)}
+.ba .row{display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:center;height:1.75rem;font-size:.86rem;padding:0 .5rem;border-radius:5px;cursor:pointer}
+.ba .row.t{font-weight:600;font-family:var(--f-head);margin-top:.3rem}
+.ba .row.c{padding-left:1.6rem}
+.ba .row:hover,.ba .row.sel{background:var(--accent-soft)}
+.ba .messy .row{font-family:var(--f-mono);color:var(--stop)}
+.ba .messy .row.t{color:var(--text)}
+.ba .row em{font-style:normal;font-size:.72rem;color:var(--muted);font-family:var(--f-body)}
+.ba .handle{position:absolute;left:-.4rem;right:-.4rem;top:var(--y,40%);height:2px;background:var(--accent);transform:translateY(-1px);pointer-events:none}
+.ba .handle::after{content:"⇅";position:absolute;top:50%;right:-1.4rem;transform:translateY(-50%);width:2rem;height:2rem;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:.9rem}
+.ba-side .lbl{margin-top:.2rem}
+.ba-side .reads{border-radius:var(--radius);padding:1rem;background:var(--tint);min-height:9rem}
+.ba-side .reads b{font-family:var(--f-head);font-weight:600;display:block;margin-bottom:.3rem}
+.ba-side .reads p{font-size:.88rem;color:var(--muted)}
+.ba-side .reads.good{background:var(--go-soft)}
+.ba-side .reads.bad{background:var(--stop-soft)}
+.ba-side .reads .meta{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.6rem}
+
+/* matcher */
+.mt-levels{display:grid;gap:.6rem;margin-top:.4rem}
+.mt-levels div{border-radius:var(--radius);padding:.7rem 1rem;border:1px dashed var(--line-strong);color:var(--faint);transition:all .3s ease}
+.mt-levels div b{font-family:var(--f-head);font-weight:500;display:block;color:inherit}
+.mt-levels div span{font-size:.8rem}
+.mt-levels div.on{border:1px solid #1F1F1F;background:#1F1F1F;color:#fff}
+.mt-levels div.on.l3{background:var(--card);color:var(--text);border-color:var(--accent)}
+.mt-desc{font-family:var(--f-mono);font-size:.84rem;line-height:1.6;background:var(--tint);border-radius:8px;padding:.7rem .9rem}
+.mt-verdict{font-family:var(--f-head);font-size:1.15rem;margin:.8rem 0 .3rem}
+
+/* context meter */
+.cx-steps{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem}
+.cx-steps button{border:1px solid var(--line-strong);background:var(--card);border-radius:999px;padding:.3rem .8rem;font-size:.8rem;cursor:pointer}
+.cx-steps button.on{background:#1F1F1F;color:#fff;border-color:#1F1F1F}
+.cx-bar{display:flex;height:3.2rem;border-radius:8px;overflow:hidden;background:var(--tint);margin:.4rem 0 .3rem}
+.cx-bar span{display:grid;place-items:center;font-size:.7rem;color:#fff;white-space:nowrap;overflow:hidden;transition:flex-basis .6s var(--ease),opacity .4s ease;flex:0 0 0%;border-right:2px solid #fff}
+.cx-fill{font-family:var(--f-mono);font-size:.8rem;color:var(--muted);text-align:right}
+.cx-fill.hi{color:var(--stop);font-weight:600}
+.cx-bar.ghost span{background:#D6D1CE;color:var(--muted)}
+.cx-legend{display:grid;grid-template-columns:repeat(2,1fr);gap:.4rem 1.4rem;margin-top:1rem}
+.cx-legend p{font-size:.85rem;display:flex;gap:.55rem;align-items:baseline}
+.cx-legend i{width:.8rem;height:.8rem;border-radius:3px;flex:none;transform:translateY(.1rem)}
+.cx-say{font-family:var(--f-head);font-size:1.25rem;margin:1rem 0 .3rem;min-height:3.3rem}
+.cx-subs{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-top:.8rem;transition:opacity .4s ease}
+.cx-subs div{border:1px solid var(--line-strong);border-radius:8px;padding:.45rem .6rem;font-size:.75rem}
+.cx-subs div i{display:block;height:.6rem;border-radius:3px;background:#57545C;margin-top:.35rem}
+
+/* sort */
+.sort{display:grid;gap:.55rem}
+.sort .card{display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:center;border:1px solid var(--line);border-radius:var(--radius);padding:.65rem .9rem;background:var(--card)}
+.sort .card p{font-size:.98rem}
+.sort .card small{display:block;font-size:.8rem;color:var(--muted);margin-top:.2rem;display:none}
+.sort.revealed .card small{display:block}
+.sort .card.right{border-color:var(--go);background:var(--go-soft)}
+.sort .card.wrong{border-color:var(--stop);background:var(--stop-soft)}
+.sort .card.either{border-color:var(--accent);background:var(--accent-soft)}
+
+/* hooks */
+.hk-code{font-family:var(--f-mono);font-size:.8rem;line-height:1.55;background:var(--tint);border-radius:8px;padding:.7rem .9rem;white-space:pre}
+.hk-code .k{color:var(--accent)}
+.toggle{display:inline-flex;align-items:center;gap:.5rem;font-size:.85rem;cursor:pointer;margin:.5rem 0}
+
+/* race */
+.race{display:grid;gap:.55rem;margin:.6rem 0}
+.race .lane2{display:grid;grid-template-columns:7rem 1fr 4.5rem;align-items:center;gap:.8rem;font-size:.88rem}
+.race .track{height:1.2rem;background:var(--tint);border-radius:999px;overflow:hidden;position:relative}
+.race .track i{position:absolute;top:0;bottom:0;left:var(--s,0%);width:0;background:#1F1F1F;border-radius:999px}
+.race .track i.flag{background:var(--accent)}
+.race .lane2 span:last-child{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);text-align:right}
+.clock{font-family:var(--f-head);font-size:2.4rem;line-height:1}
+.ctxmini{display:flex;height:1.4rem;border-radius:6px;overflow:hidden;background:var(--tint);margin-top:.35rem}
+.ctxmini span{background:#57545C;border-right:2px solid #fff;transition:flex-basis .4s ease;flex:0 0 0%}
+.collide{margin-top:1rem;border-radius:var(--radius);padding:.9rem 1rem;background:var(--tint)}
+.collide .two{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin:.6rem 0}
+.collide .two div{border:1px solid var(--line-strong);border-radius:8px;padding:.5rem .7rem;font-family:var(--f-mono);font-size:.76rem;background:var(--card)}
+
+/* learning */
+.props{display:grid;gap:.6rem}
+.prop{display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:center;border:1px solid var(--line);border-radius:var(--radius);padding:.7rem .9rem;transition:opacity .3s ease,background-color .3s ease}
+.prop p{font-size:.95rem}
+.prop small{display:block;font-family:var(--f-mono);font-size:.74rem;color:var(--muted);margin-top:.15rem}
+.prop.ok{background:var(--go-soft);border-color:var(--go)}
+.prop.no{opacity:.45;text-decoration:line-through}
+.prop .acts{display:flex;gap:.4rem}
+
+/* builder */
+.bd{display:grid;grid-template-columns:22rem 1fr;gap:1.4rem;align-items:start}
+.bd label.f{display:block;font-size:.8rem;color:var(--muted);margin:.7rem 0 .25rem}
+.bd .checks2{display:grid;gap:.35rem;margin-top:.5rem}
+.bd .checks2 label{display:flex;gap:.5rem;align-items:baseline;font-size:.88rem;cursor:pointer}
+.bd .meter{font-size:.8rem;margin-top:.35rem}
+.bd .tabs2{display:flex;gap:.3rem;margin-bottom:.5rem;flex-wrap:wrap}
+.bd .tabs2 button{border:1px solid var(--line-strong);background:var(--card);border-radius:6px;padding:.25rem .7rem;font-family:var(--f-mono);font-size:.76rem;cursor:pointer}
+.bd .tabs2 button.on{background:#1F1F1F;color:#fff;border-color:#1F1F1F}
+.bd pre{margin:0;font-family:var(--f-mono);font-size:.8rem;line-height:1.5;background:var(--tint);border-radius:8px;padding:.8rem 1rem;white-space:pre-wrap;max-height:26rem;overflow:auto}
+
+/* overview */
+#ov{position:fixed;inset:4.4rem 2.6rem 4.4rem;z-index:31;background:var(--card);border-radius:var(--radius);box-shadow:0 24px 60px rgba(31,31,31,.25);padding:1.2rem 1.3rem;overflow:auto;opacity:0;pointer-events:none;transition:opacity .2s ease}
+body.ov-open #ov,body.ov-open #ex-back{opacity:1;pointer-events:auto}
+#ov .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.7rem;margin-top:.8rem}
+#ov a{display:block;border:1px solid var(--line);border-radius:8px;padding:.65rem .75rem;text-decoration:none;min-height:5.2rem;transition:border-color .2s ease}
+#ov a:hover,#ov a.cur{border-color:var(--accent)}
+#ov a small{display:block;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:.25rem}
+#ov a b{font-family:var(--f-head);font-weight:500;font-size:.88rem;line-height:1.25;display:block}
+#ov a em{font-style:normal;font-size:.68rem;color:var(--muted)}
+
+/* timer and copy-all */
+#timer{font-family:var(--f-mono);font-size:.76rem;padding:.25rem .6rem;border-radius:999px;background:var(--tint);display:none}
+#timer.show{display:inline-block}
+#timer.over{background:#FDE7D9;color:var(--stop)}
+.run-h .copyall{padding:.15rem .55rem;font-size:.64rem;margin-left:auto}
+.run-h small{order:3;width:100%;text-align:left}
+.run-h{flex-wrap:wrap}
+
+/* skill folder: clickable files */
+pre.tree button.f{font:inherit;color:inherit;background:none;border:0;padding:0 .3rem;margin:0 -.3rem;border-radius:4px;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}
+pre.tree button.f:hover{background:var(--accent-soft)}
+pre.tree button.f.on{color:var(--accent);text-decoration-color:var(--accent);background:var(--accent-soft)}
+pre.fv{max-height:26rem;overflow:auto}
+pre.fv .c{color:var(--faint)}
+pre.fv .h{color:var(--accent)}
+
+/* matcher: the same stepped bars as the slide; a level not reached is a dashed outline */
+.mt-lv{margin-top:.5rem}
+.mt-lv .when{font-style:normal}
+.mt-lv>div{transition:background-color .35s ease,color .35s ease,border-color .35s ease,box-shadow .35s ease}
+.mt-lv>div:not(.on){background:transparent!important;box-shadow:none!important;border:1px dashed var(--line-strong);color:var(--faint)!important}
+.mt-lv>div:not(.on) span,.mt-lv>div:not(.on) .when{color:var(--faint)!important}
+.mt-lv .l1{width:62%}
+.mt-lv .l2{width:82%}
+.mt-lv>div.on{border:1px solid transparent}
+.mt-lv .l3.on{border-color:var(--accent)}
+
+/* header buttons */
+.hbtns{position:absolute;top:0;right:0;display:flex;gap:.45rem;align-items:center}
+.hbtns .ex-btn{position:static}
+.demo-btn,.pop-btn{display:inline-flex;align-items:center;gap:.45rem;border:1px solid var(--line-strong);background:var(--card);color:var(--text);border-radius:999px;padding:.3rem .85rem .3rem .4rem;font-size:.74rem;font-weight:500;cursor:pointer;transition:background-color .2s ease,border-color .2s ease}
+.pop-btn{padding-left:.75rem;color:var(--muted)}
+.demo-btn:hover,.pop-btn:hover{border-color:#1F1F1F}
+.demo-btn i{width:1.35rem;height:1.35rem;border-radius:50%;background:#1F1F1F;color:#fff;display:grid;place-items:center;font-style:normal;font-size:.7rem;transition:transform .25s ease}
+body.run-open .demo-btn{background:#1F1F1F;color:#fff;border-color:#1F1F1F}
+body.run-open .demo-btn i{background:#fff;color:#1F1F1F;transform:rotate(90deg)}
+/* the demo panel: collapsed unless opened */
+.panel.has-run{grid-template-columns:minmax(0,1fr)}
+.panel.has-run>.run{display:none}
+body.run-open .panel.has-run{grid-template-columns:minmax(0,1fr) 24rem}
+body.run-open .panel.has-run>.run{display:grid}
+
+#nm-in{tab-size:4;white-space:pre;overflow:auto;line-height:1.55}
+
+.brand b{font-family:var(--f-head);font-weight:600;font-size:.95rem;color:var(--text)}
+.cover .eyebrow{margin-top:0}
+
+/* QR codes: dark on a white tile, so phones read them on the gradient */
+.qr{display:block;background:#fff;border-radius:8px;padding:.3rem;line-height:0}
+.qr svg{width:100%;height:100%;display:block}
+.th .rows a.qrrow{grid-template-columns:minmax(0,1fr) 7rem;align-items:center;gap:1.2rem;color:#fff}
+.th .rows a.qrrow:last-child{border-bottom:1px solid rgba(255,255,255,.4)}
+.th .rows a.qrrow:hover{background:rgba(255,255,255,.08)}
+.th .rows .tx{display:grid;gap:.2rem}
+.th .rows .qr{width:7rem;height:7rem}
+.th .rows code{word-break:break-all}
+.follow{display:inline-flex;align-items:center;gap:.9rem;margin-top:1.6rem;text-decoration:none;color:#fff}
+.follow .qr{width:5.2rem;height:5.2rem}
+.follow b{display:block;font-family:var(--f-head);font-weight:500;font-size:1rem}
+.follow small{font-size:.8rem;color:rgba(255,255,255,.88)}
+
+.th .one{display:grid;justify-items:start;gap:1.4rem;color:#fff;text-decoration:none}
+.th .one .qr{width:13rem;height:13rem}
+.th .one .tx{display:grid;gap:.6rem}
+.th .one b{font-family:var(--f-head);font-weight:500;font-size:1.4rem}
+.th .one .items{display:grid;gap:.15rem;font-size:.95rem;color:rgba(255,255,255,.92)}
+.th .one .items span::before{content:"→ ";opacity:.7}
+.th .one code{font-size:.85rem;color:#fff;opacity:.9;word-break:break-all}
+.th .one:hover b{text-decoration:underline}
+
+@media (prefers-reduced-motion:reduce){
+  .rv,.panel.active .rv{transition:none!important;opacity:1;transform:none}
+  .draw{stroke-dashoffset:0}
+  .loop svg .dot{display:none}
+}
+</style>
+</head>
+<body data-theme="brand" data-slide="start">
+
+<header class="topbar">
+  <a class="brand" href="#start" aria-label="To the start"><b>Mathias Halkjær</b><span>Advanced Agent Skills for Power BI</span></a>
+  <nav class="tabs" aria-label="The six pieces">
+    <a href="#skill" data-tab="1"><span class="n">01</span>Description</a>
+    <a href="#references" data-tab="2"><span class="n">02</span>References</a>
+    <a href="#scripts" data-tab="3"><span class="n">03</span>Scripts</a>
+    <a href="#hooks" data-tab="4"><span class="n">04</span>Hooks</a>
+    <a href="#subagents" data-tab="5"><span class="n">05</span>Sub-agents</a>
+    <a href="#learning" data-tab="6"><span class="n">06</span>Learning loop</a>
+    <span class="tab-ink" id="ink" aria-hidden="true"></span>
+  </nav>
+</header>
+
+<main class="stage" id="stage">
+
+<!-- 1 cover -->
+<section class="panel cover" id="start" data-theme="brand" aria-labelledby="h-start">
+  <div class="cv">
+    <div>
+      <p class="eyebrow rv" style="--d:120ms">Data &amp; AI Builders Conference · Bergamo · 7 November 2026</p>
+      <h1 id="h-start" class="rv" style="--d:220ms;--fy:26px">Advanced Agent Skills for Power BI</h1>
+      <span class="rule rv" style="--d:430ms" aria-hidden="true"></span>
+      <p class="sub rv" style="--d:520ms">What's beneath the surface of a skill: how it's found, what it can carry, what it can work with, and how it learns.</p>
+      <ol class="chain rv" style="--d:650ms" aria-label="The six pieces">
+        <li>Description</li><li>References</li><li>Scripts</li><li>Hooks</li><li>Sub-agents</li><li>Learning loop</li>
+      </ol>
+      <p class="who rv" style="--d:780ms"><b>Mathias Halkjær</b><span>Microsoft MVP</span></p>
+    </div>
+    <nav class="cv-agenda" aria-label="Contents">
+      <p class="cv-ah rv" style="--d:380ms">Contents</p>
+      <a class="cv-row rv" href="#job" style="--d:440ms;--fx:40px;--fy:0px"><span class="n">00</span><span><b>Our case</b><small>An inherited Sales model, made ready for AI</small></span><i aria-hidden="true">→</i></a>
+      <a class="cv-row rv" href="#skill" style="--d:500ms;--fx:40px;--fy:0px"><span class="n">01</span><span><b>Description</b><small>How a skill is found, and why one line decides</small></span><i aria-hidden="true">→</i></a>
+      <a class="cv-row rv" href="#references" style="--d:560ms;--fx:40px;--fy:0px"><span class="n">02</span><span><b>References</b><small>Long rules that cost nothing until they're needed</small></span><i aria-hidden="true">→</i></a>
+      <a class="cv-row rv" href="#scripts" style="--d:620ms;--fx:40px;--fy:0px"><span class="n">03</span><span><b>Scripts</b><small>Exact checks the model shouldn't improvise</small></span><i aria-hidden="true">→</i></a>
+      <a class="cv-row rv" href="#hooks" style="--d:680ms;--fx:40px;--fy:0px"><span class="n">04</span><span><b>Hooks</b><small>Rules the harness enforces, every time</small></span><i aria-hidden="true">→</i></a>
+      <a class="cv-row rv" href="#subagents" style="--d:740ms;--fx:40px;--fy:0px"><span class="n">05</span><span><b>Sub-agents</b><small>In one place, then in parallel</small></span><i aria-hidden="true">→</i></a>
+      <a class="cv-row rv" href="#learning" style="--d:800ms;--fx:40px;--fy:0px"><span class="n">06</span><span><b>Learning loop</b><small>A skill that improves from the work</small></span><i aria-hidden="true">→</i></a>
+    </nav>
+  </div>
+  <aside class="notes">Welcome. One model, one skill, and we grow the skill all the way through the session.
+Everything you see is in the field guide and the demo project; the links are at the end.</aside>
+</section>
+
+<!-- 2 hands -->
+<section class="panel" id="hands" data-theme="light" aria-labelledby="h-hands">
+  <header>
+    <p class="eyebrow rv">Before we start</p>
+    <h2 id="h-hands" class="rv" style="--d:80ms">Quick show of hands</h2>
+  </header>
+  <div class="body">
+    <ol class="hands">
+      <li class="rv" style="--d:200ms"><span class="n">1</span><p>Who has connected an agent to Power BI through an MCP server?</p></li>
+      <li class="rv" style="--d:380ms"><span class="n">2</span><p>Who has written an agent skill?</p></li>
+      <li class="rv key" style="--d:560ms"><span class="n">3</span><p>Who has looked at what happens <span class="grad-text">after</span> the skill is written?</p></li>
+    </ol>
+  </div>
+  <div></div>
+  <aside class="notes">Count hands for each. The third question is the session: a skill is just a folder with a text file, but there's a lot beneath that surface.</aside>
+</section>
+
+<!-- 3 job -->
+<section class="panel" id="job" data-theme="light" aria-labelledby="h-job">
+  <header>
+    <div class="hbtns"><button class="ex-btn" type="button" data-ex="job" title="Open the exercise (E)"><i>▶</i>Exercise</button></div>
+    <p class="eyebrow rv">The thread through every demo</p>
+    <h2 id="h-job" class="rv" style="--d:80ms">Today's job: get the Sales model ready for AI</h2>
+    <p class="lead rv" style="--d:160ms">Copilot and data agents read your names, descriptions and formats. This inherited model has none of them.</p>
+  </header>
+  <div class="body job">
+    <div class="box rv" style="--d:240ms;--fx:-30px;--fy:0px">
+      <span class="tag" style="color:var(--stop)">Inherited</span>
+      <ul class="fields">
+        <li class="t"><span class="mono">DimCustomer</span></li>
+        <li class="c bad"><span class="mono">cust_id</span><em>visible key</em></li>
+        <li class="t"><span class="mono">FactSales</span></li>
+        <li class="c bad"><span class="mono">TotalSales</span><em>no description</em></li>
+        <li class="c bad"><span class="mono">total_cost</span><em>no folder</em></li>
+        <li class="c bad"><span class="mono">Margin</span><em>0.31</em></li>
+        <li class="c bad"><span class="mono">Sales Status</span><em>IF( … IF( … ))</em></li>
+      </ul>
+    </div>
+    <div class="mid rv" style="--d:520ms;--fy:0px">
+      <svg viewBox="0 0 64 20" aria-hidden="true"><path class="draw" pathLength="1" style="--d:560ms" d="M2 10 H58" stroke="#C514B4" stroke-width="2.5" fill="none"/><path d="M52 4 L60 10 L52 16" stroke="#C514B4" stroke-width="2.5" fill="none"/></svg>
+      <span>60 min</span>
+    </div>
+    <div class="box rv" style="--d:700ms;--fx:30px;--fy:0px">
+      <span class="tag">Ready for AI</span>
+      <ul class="fields">
+        <li class="t"><span>Customer</span></li>
+        <li class="c"><span>Customer Key</span><em>hidden</em></li>
+        <li class="t"><span>Sales</span></li>
+        <li class="c"><span>Total Sales</span><em>Revenue · described</em></li>
+        <li class="c"><span>Total Cost</span><em>Profitability · described</em></li>
+        <li class="c"><span>Margin %</span><em>31.0%</em></li>
+        <li class="c"><span>Sales Status</span><em>VAR + SWITCH</em></li>
+      </ul>
+    </div>
+  </div>
+  <div class="need rv" style="--d:900ms">
+    <span class="chip acc">Business names</span><span class="chip acc">Hidden keys</span><span class="chip acc">Display folders</span><span class="chip acc">Formats</span><span class="chip acc">A description on everything</span>
+  </div>
+  <aside class="notes">This is the thread through every demo. A small Sales model saved as a Power BI project: four tables, one TMDL file per table. It looks like most models we inherit.
+By the end: business names, hidden keys, display folders, formats and a description on everything. That's what Copilot and data agents need to answer well.</aside>
+</section>
+
+<!-- 4 two ways -->
+<section class="panel" id="ways" data-theme="light" aria-labelledby="h-ways">
+  <header>
+    <p class="eyebrow rv">The setup</p>
+    <h2 id="h-ways" class="rv" style="--d:80ms">Two ways for the agent to reach the model</h2>
+  </header>
+  <div class="body ways">
+    <div class="agent rv" style="--d:180ms"><b>The agent</b><small>in the harness: Claude Code in VS Code</small></div>
+    <svg class="wires rv" style="--d:380ms;--fy:0px" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M50 0 V40 H25 V100"/>
+      <path class="acc" d="M50 0 V40 H75 V100"/>
+    </svg>
+    <div class="box rv" style="--d:620ms">
+      <span class="tag">Files</span>
+      <h3>The TMDL files</h3>
+      <ul class="rules">
+        <li>One file per table, in git: every change shows in a diff.</li>
+        <li>Your working copy. The demos edit these.</li>
+        <li>Desktop sees changes when you reopen the project.</li>
+      </ul>
+    </div>
+    <div class="box rv" style="--d:760ms">
+      <span class="tag">Live model</span>
+      <h3>The Power BI MCP server</h3>
+      <ul class="rules">
+        <li>Talks to a live model: look things up, run DAX queries.</li>
+        <li>The only way the agent can reach production.</li>
+        <li>So that's where the guardrail sits (04 · Hooks).</li>
+      </ul>
+    </div>
+    <div></div>
+    <div class="targets rv" style="--d:960ms"><span class="chip go">✓ Sales [Dev]</span><span class="chip stop">✕ Sales [Prod]</span></div>
+  </div>
+  <div></div>
+  <aside class="notes">Two routes. The files: the PBIP project in git, which is where the changes happen today, because git shows every one of them. The MCP server: Microsoft's Power BI modelling MCP server, connected to a live model. Production is only reachable this way, and that's important when we get to hooks.</aside>
+</section>
+
+<!-- 5 demo 0 -->
+<section class="panel has-run" id="demo0" data-theme="light" aria-labelledby="h-demo0">
+  <header>
+    <div class="hbtns"><button class="demo-btn" type="button" title="Show or hide the demo steps (D)"><i>▸</i>Live demo 0</button><button class="pop-btn" type="button" title="Open the demo steps in their own window (P)">⧉ Pop out</button></div>
+    <p class="eyebrow rv">Starting point</p>
+    <h2 id="h-demo0" class="rv" style="--d:80ms">The agent without a skill</h2>
+    <p class="lead rv" style="--d:160ms">The same request we'll make again later, before the agent knows anything about how we work.</p>
+  </header>
+  <div class="body vs">
+    <div class="box rv" style="--d:260ms">
+      <span class="tag">Watch for</span>
+      <ul class="rules">
+        <li>It renames the columns its own way: <code>CustomerId</code>, <code>CustomerName</code>.</li>
+        <li>The names are fine. They're just not ours.</li>
+        <li>No hidden keys, no descriptions, no folders.</li>
+      </ul>
+    </div>
+    <div class="rv" style="--d:520ms;display:grid;align-content:center;padding:0 1rem">
+      <p class="say" style="font-size:2.4rem;line-height:1.2">It knows Power BI.<br>It doesn't know <span class="grad-text">us</span>.</p>
+    </div>
+  </div>
+  <aside class="run rv" style="--d:200ms;--fx:24px;--fy:0px" aria-label="How to run Live demo 0">
+    <div class="run-h"><b>Live demo 0</b><button class="btn copyall" type="button">Copy all prompts</button><small>stage-0 · about 4 min</small></div>
+    <ol class="steps">
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Get the demo project, and open a terminal in it</p>
+        <div class="cmd"><code>git clone https://github.com/MathiasHalkjaer/agent-skills-pbi-demo; cd agent-skills-pbi-demo</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Reset to stage-0</p>
+        <div class="cmd"><code>powershell -File demo\reset.ps1 stage-0</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-desk"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Power BI Desktop</span>
+        <p>Reopen Sales.pbip. Show the field list: DimCustomer, cust_id, TotalSales, Margin as 0.31.</p>
+      </div></li>
+      <li class="step s-cc"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Claude Code</span>
+        <div class="cmd"><code>/clear</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-prompt"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Prompt</span>
+        <div class="cmd"><code>Rename the columns in DimCustomer to something more readable.</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Watch for</span>
+        <p>It renames its own way, probably CustomerId and CustomerName.</p>
+      </div></li>
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Show what changed</p>
+        <div class="cmd"><code>git diff</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-say"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Say</span>
+        <p>It knows Power BI. It doesn&#x27;t know us.</p>
+      </div></li>
+    </ol>
+    <p class="run-f"><b>If it goes wrong:</b> Any rename makes the point, so there&#x27;s little to go wrong.</p>
+  </aside>
+  <aside class="notes">Stage: reset.ps1 stage-0. Show the field list in Desktop first: DimCustomer, cust_id, TotalSales, Margin as 0.31 with no percent format.
+Run the prompt. It renames its own way, probably CustomerId, CustomerName.
+Say: It knows Power BI. It doesn't know us.
+Then git diff, and reset.</aside>
+</section>
+
+<!-- 6 pieces -->
+<section class="panel" id="pieces" data-theme="light" aria-labelledby="h-pieces">
+  <header>
+    <div class="hbtns"><button class="ex-btn" type="button" data-ex="pieces" title="Open the exercise (E)"><i>▶</i>Exercise</button></div>
+    <p class="eyebrow rv">The map</p>
+    <h2 id="h-pieces" class="rv" style="--d:80ms">Six pieces, one skill</h2>
+    <p class="lead rv" style="--d:160ms">We add them one at a time to the same skill, <code>model-standards</code>. The tabs at the top follow along.</p>
+  </header>
+  <div class="body pieces">
+    <a class="box piece rv" href="#skill" style="--d:220ms"><span class="num grad-text">01</span><h3>Description</h3><p>Decides when the skill loads.</p><span class="where">SKILL.md header</span></a>
+    <a class="box piece rv" href="#references" style="--d:300ms"><span class="num grad-text">02</span><h3>References</h3><p>Long rules, read only when needed.</p><span class="where">references/</span></a>
+    <a class="box piece rv" href="#scripts" style="--d:380ms"><span class="num grad-text">03</span><h3>Scripts</h3><p>Exact checks the model shouldn't improvise.</p><span class="where">scripts/</span></a>
+    <a class="box piece rv" href="#hooks" style="--d:460ms"><span class="num grad-text">04</span><h3>Hooks</h3><p>Rules the harness enforces on every call.</p><span class="where">.claude/settings.json</span></a>
+    <a class="box piece rv" href="#subagents" style="--d:540ms"><span class="num grad-text">05</span><h3>Sub-agents</h3><p>Independent work in parallel, each in its own context.</p><span class="where">.claude/agents/</span></a>
+    <a class="box piece rv" href="#learning" style="--d:620ms"><span class="num grad-text">06</span><h3>Learning loop</h3><p>The skill improves from the work. You approve.</p><span class="where">“After each task”</span></a>
+  </div>
+  <div></div>
+  <aside class="notes">The map for the session. Each piece adds one thing. The tabs at the top show where we are: a tick for what we have, the underline for the new piece.</aside>
+</section>
+
+<!-- 7 skill folder -->
+<section class="panel" id="skill" data-theme="light" data-tab="1" aria-labelledby="h-skill">
+  <header>
+    <p class="eyebrow rv">01 · Description</p>
+    <h2 id="h-skill" class="rv" style="--d:80ms">A skill is a folder with a SKILL.md</h2>
+    <p class="lead rv" style="--d:160ms">Agent Skills is an open standard: the same folder works in any agent harness that supports it.</p>
+  </header>
+  <div class="body folder">
+    <div class="box rv" style="--d:240ms;--fx:-24px;--fy:0px">
+      <span class="tag">The folder · click a file</span>
+<pre class="code tree">.claude/skills/
+  model-standards/
+    <button class="f on" type="button" data-file="SKILL.md">SKILL.md</button>
+    references/
+      <button class="f" type="button" data-file="references/dax-style.md">dax-style.md</button>
+      <button class="f" type="button" data-file="references/glossary.md">glossary.md</button>
+      <button class="f" type="button" data-file="references/decisions.md">decisions.md</button>
+    scripts/
+      <button class="f" type="button" data-file="scripts/check_names.py">check_names.py</button></pre>
+    </div>
+    <div class="box rv" style="--d:420ms">
+      <span class="tag" id="fv-name">SKILL.md</span>
+<pre class="code fv" id="fv"><span class="hl">---
+name: model-standards
+description: Naming, display folder, description
+  and DAX conventions for our Power BI semantic
+  models. Use when creating, renaming, tidying,
+  documenting or reviewing …
+---</span>
+# Model standards
+## Names
+- Tables: singular business nouns, no prefixes
+  (Customer, not DimCustomer).
+- Columns and measures: words with spaces …</pre>
+    </div>
+    <div class="ann">
+      <div class="rv" id="an1" style="--d:700ms;--fx:20px;--fy:0px"><b>Always in context</b><span>The name and description of every installed skill.</span></div>
+      <div class="dim rv" id="an2" style="--d:860ms;--fx:20px;--fy:0px"><b>Loaded when used</b><span>Everything below the header.</span></div>
+    </div>
+  </div>
+  <div></div>
+  <aside class="notes">The whole thing is text files and folders. The header has two lines that matter: the name, and the description. Everything under the header only loads when the agent decides to use the skill.
+In Claude Code, project skills live in .claude/skills, personal ones in your user folder.</aside>
+</section>
+
+<!-- 8 how found -->
+<section class="panel" id="found" data-theme="light" data-tab="1" aria-labelledby="h-found">
+  <header>
+    <div class="hbtns"><button class="ex-btn" type="button" data-ex="found" title="Open the exercise (E)"><i>▶</i>Exercise</button></div>
+    <p class="eyebrow rv">01 · Description</p>
+    <h2 id="h-found" class="rv" style="--d:80ms">How a skill is found</h2>
+    <p class="lead rv" style="--d:160ms">Progressive disclosure: the agent reads only as much as the task needs.</p>
+  </header>
+  <div class="body levels">
+    <div class="lv">
+      <div class="l1 rv" style="--d:260ms;--fx:-30px;--fy:0px"><span class="n">1</span><b>Name and description</b><span class="d">Of every skill</span><em class="when" style="font-style:normal">Always</em></div>
+      <div class="l2 rv" style="--d:520ms;--fx:-30px;--fy:0px"><span class="n">2</span><b>The rest of SKILL.md</b><span class="d">The instructions</span><em class="when" style="font-style:normal">When a request matches</em></div>
+      <div class="l3 rv" style="--d:780ms;--fx:-30px;--fy:0px"><span class="n">3</span><b>References and scripts</b><span class="d">The files SKILL.md points to</span><em class="when" style="font-style:normal">Only when the instructions say so</em></div>
+    </div>
+    <div class="side">
+      <p class="rv" style="--d:1000ms"><b>Matching is the agent's judgement,</b> not a keyword search.</p>
+      <p class="rv" style="--d:1150ms"><b>So write the words people type:</b> rename, tidy, document, DAX.</p>
+      <p class="rv" style="--d:1300ms"><b>Skills are chosen at the start</b> of a conversation. Start a new one after you change a skill.</p>
+    </div>
+  </div>
+  <div></div>
+  <aside class="notes">Three levels. Level 1 is cheap, so you can have many skills installed. Level 2 is the body of SKILL.md, loaded when the agent judges that the request matches the description. Level 3 is files the body points to, read only when needed.
+The consequence: the description is the most important line you write. It's the only part the agent sees when it decides.</aside>
+</section>
+
+<!-- 9 demo 1 -->
+<section class="panel has-run" id="demo1" data-theme="light" data-tab="1" aria-labelledby="h-demo1">
+  <header>
+    <div class="hbtns"><button class="demo-btn" type="button" title="Show or hide the demo steps (D)"><i>▸</i>Live demo 1</button><button class="pop-btn" type="button" title="Open the demo steps in their own window (P)">⧉ Pop out</button><button class="ex-btn" type="button" data-ex="found" title="Open the exercise (E)"><i>▶</i>Exercise</button></div>
+    <p class="eyebrow rv">01 · Description</p>
+    <h2 id="h-demo1" class="rv" style="--d:80ms">The description decides</h2>
+    <p class="lead rv" style="--d:160ms">Same skill, same instructions. Only the description changes between the two runs.</p>
+  </header>
+  <div class="body vs">
+    <div class="box plain rv" style="--d:240ms">
+      <span class="tag" style="color:var(--muted)">Stage 1 · vague</span>
+<pre class="code">description: Helps with Power BI.</pre>
+      <p class="res"><span class="chip stop">✕</span>The skill doesn't load, or loads for the wrong reasons.</p>
+    </div>
+    <div class="box rv" style="--d:480ms">
+      <span class="tag">Stage 2 · sharp</span>
+<pre class="code">description: … Use when creating, <span class="k">renaming</span>,
+  <span class="k">tidying</span>, documenting or reviewing …</pre>
+      <p class="res"><span class="chip go">✓</span>Customer Key, Customer Name, Country, Segment. The table becomes Customer.</p>
+    </div>
+    <p class="say rv" style="--d:800ms">Same instructions, different description. That one line is the whole difference.</p>
+  </div>
+  <aside class="run rv" style="--d:200ms;--fx:24px;--fy:0px" aria-label="How to run Live demo 1">
+    <div class="run-h"><b>Live demo 1</b><button class="btn copyall" type="button">Copy all prompts</button><small>stage-1 → stage-2 · about 7 min</small></div>
+    <ol class="steps">
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Reset to stage-1</p>
+        <div class="cmd"><code>powershell -File demo\reset.ps1 stage-1</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-vs"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">VS Code</span>
+        <p>Show the vague description</p>
+        <div class="cmd"><code>code .claude\skills\model-standards\SKILL.md</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-cc"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Claude Code</span>
+        <div class="cmd"><code>/clear</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-prompt"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Prompt</span>
+        <div class="cmd"><code>Tidy up the column names in DimCustomer.</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Watch for</span>
+        <p>No “model-standards” line in the chat, or it loads for the wrong reasons.</p>
+      </div></li>
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Reset to stage-2</p>
+        <div class="cmd"><code>powershell -File demo\reset.ps1 stage-2</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-vs"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">VS Code</span>
+        <p>Show the sharp description</p>
+        <div class="cmd"><code>code .claude\skills\model-standards\SKILL.md</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-cc"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Claude Code</span>
+        <div class="cmd"><code>/clear</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-prompt"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Same prompt</span>
+        <div class="cmd"><code>Tidy up the column names in DimCustomer.</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Watch for</span>
+        <p>The skill loads: Customer Key, Customer Name, Country, Segment; the table becomes Customer.</p>
+      </div></li>
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Show the diff, renames included</p>
+        <div class="cmd"><code>git add -A; git diff --cached -M</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Watch for</span>
+        <p>sourceColumn unchanged; relationships.tmdl and the DAX updated; DimCustomer.tmdl → Customer.tmdl.</p>
+      </div></li>
+      <li class="step s-say"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Say</span>
+        <p>Same instructions, different description. That one line is the whole difference.</p>
+      </div></li>
+    </ol>
+    <p class="run-f"><b>If it goes wrong:</b> The skill doesn&#x27;t load: type /model-standards to load it by name, and say why.</p>
+  </aside>
+  <aside class="notes">reset.ps1 stage-1, show SKILL.md: "Helps with Power BI." Run the prompt. Point at the chat: no model-standards line.
+reset.ps1 stage-2, show the new description with the words people type. Same prompt, new conversation. The skill loads.
+Show the diff: sourceColumn unchanged, relationships.tmdl and the DAX updated, the file renamed to Customer.tmdl.
+If the skill doesn't load: type /model-standards, and say why: it's the description again.</aside>
+</section>
+
+<!-- 10 references -->
+<section class="panel has-run" id="references" data-theme="light" data-tab="2" aria-labelledby="h-refs">
+  <header>
+    <div class="hbtns"><button class="demo-btn" type="button" title="Show or hide the demo steps (D)"><i>▸</i>Live demo 2</button><button class="pop-btn" type="button" title="Open the demo steps in their own window (P)">⧉ Pop out</button></div>
+    <p class="eyebrow rv">02 · References</p>
+    <h2 id="h-refs" class="rv" style="--d:80ms">References load only when they're needed</h2>
+    <p class="lead rv" style="--d:160ms">One line in SKILL.md, a whole style guide behind it.</p>
+  </header>
+  <div class="body refs">
+    <p class="pointer rv" style="--d:220ms"><span class="tag" style="margin:0">SKILL.md</span><code>For style and patterns, read references/dax-style.md.</code></p>
+    <div class="box plain rv" style="--d:300ms;--fx:-24px;--fy:0px">
+      <span class="tag" style="color:var(--muted)">Before</span>
+<pre class="code">IF([TotalSales]&gt;50000,"High",
+  IF([TotalSales]&gt;20000,
+    "Medium","Low"))</pre>
+    </div>
+    <div class="mid rv" style="--d:560ms;--fy:0px">
+      <svg viewBox="0 0 64 20" width="64" height="20" aria-hidden="true"><path class="draw" pathLength="1" style="--d:600ms" d="M2 10 H58" stroke="#C514B4" stroke-width="2.5" fill="none"/><path d="M52 4 L60 10 L52 16" stroke="#C514B4" stroke-width="2.5" fill="none"/></svg>
+      <span>dax-style.md</span>
+    </div>
+    <div class="box rv" style="--d:760ms;--fx:24px;--fy:0px">
+      <span class="tag">After</span>
+<pre class="code"><span class="k">VAR CurrentSales</span> = [Total Sales]
+RETURN
+    <span class="k">SWITCH</span>(
+        TRUE(),
+        CurrentSales &gt; 50000, "High",
+        CurrentSales &gt; 20000, "Medium",
+        "Low"
+    )</pre>
+    </div>
+  </div>
+  <aside class="run rv" style="--d:200ms;--fx:24px;--fy:0px" aria-label="How to run Live demo 2">
+    <div class="run-h"><b>Live demo 2</b><button class="btn copyall" type="button">Copy all prompts</button><small>stage-2 · about 4 min</small></div>
+    <ol class="steps">
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Reset to stage-2</p>
+        <div class="cmd"><code>powershell -File demo\reset.ps1 stage-2</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-cc"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Claude Code</span>
+        <div class="cmd"><code>/clear</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-prompt"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Prompt 1</span>
+        <div class="cmd"><code>Fix the Sales Status measure.</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Watch for</span>
+        <p>It opens references/dax-style.md. The nested IF becomes VAR CurrentSales + SWITCH(TRUE()).</p>
+      </div></li>
+      <li class="step s-cc"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Claude Code</span>
+        <div class="cmd"><code>/clear</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-prompt"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Prompt 2</span>
+        <div class="cmd"><code>Rename the columns in DimProduct.</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Watch for</span>
+        <p>dax-style.md isn&#x27;t opened.</p>
+      </div></li>
+      <li class="step s-say"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Say</span>
+        <p>The DAX style guide costs nothing until there&#x27;s DAX to write.</p>
+      </div></li>
+    </ol>
+    <p class="run-f"><b>If it goes wrong:</b> Short on time: skip this demo. It&#x27;s section 1.4 in the guide.</p>
+  </aside>
+  <aside class="notes">Prompt 1: Fix the Sales Status measure. Show that the agent reads references/dax-style.md. The nested IF becomes VAR + SWITCH(TRUE()), and the variable is CurrentSales, not Sales, because of the rule about not naming variables like tables.
+Prompt 2, new conversation: Rename the columns in DimProduct. Show that dax-style.md isn't opened.
+Say: The DAX style guide costs nothing until there's DAX to write.
+Short on time: skip this demo, it's section 1.4 in the guide.</aside>
+</section>
+
+<!-- 11 scripts -->
+<section class="panel has-run" id="scripts" data-theme="light" data-tab="3" aria-labelledby="h-scripts">
+  <header>
+    <div class="hbtns"><button class="demo-btn" type="button" title="Show or hide the demo steps (D)"><i>▸</i>Live demo 3</button><button class="pop-btn" type="button" title="Open the demo steps in their own window (P)">⧉ Pop out</button><button class="ex-btn" type="button" data-ex="scripts" title="Open the exercise (E)"><i>▶</i>Exercise</button></div>
+    <p class="eyebrow rv">03 · Scripts</p>
+    <h2 id="h-scripts" class="rv" style="--d:80ms">Scripts check what can be checked exactly</h2>
+    <p class="lead rv" style="--d:160ms">SKILL.md ends with “Before you finish, run check_names.py and fix everything it reports.”</p>
+  </header>
+  <div class="body scripts">
+    <div class="box stat rv" style="--d:240ms">
+      <span class="big grad-text">22</span>
+      <p>problems in the inherited model, found in under a second.</p>
+      <code>python …/scripts/check_names.py</code>
+    </div>
+    <div class="box rv" style="--d:440ms">
+      <span class="tag">The script checks</span>
+      <h3>Same answer, every time</h3>
+      <ul class="rules">
+        <li>Underscores in names</li>
+        <li>Measures without a description</li>
+      </ul>
+    </div>
+    <div class="box plain rv" style="--d:620ms">
+      <span class="tag" style="color:var(--muted)">The agent judges</span>
+      <h3>What needs understanding</h3>
+      <ul class="rules">
+        <li><code>qty</code> should be Quantity</li>
+        <li><code>ProductName</code> should be Product Name</li>
+        <li>Which folder a measure goes in</li>
+        <li>How to word the description</li>
+      </ul>
+    </div>
+  </div>
+  <aside class="run rv" style="--d:200ms;--fx:24px;--fy:0px" aria-label="How to run Live demo 3">
+    <div class="run-h"><b>Live demo 3</b><button class="btn copyall" type="button">Copy all prompts</button><small>stage-3 · about 5 min</small></div>
+    <ol class="steps">
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Reset to stage-3</p>
+        <div class="cmd"><code>powershell -File demo\reset.ps1 stage-3</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Run the check yourself: 22 problems</p>
+        <div class="cmd"><code>python .claude\skills\model-standards\scripts\check_names.py</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-cc"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Claude Code</span>
+        <div class="cmd"><code>/clear</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-prompt"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Prompt</span>
+        <div class="cmd"><code>Tidy up the DimProduct table.</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Watch for</span>
+        <p>At the end it runs check_names.py (“Before you finish”) and fixes what it reports.</p>
+      </div></li>
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Run the check again: DimProduct is clean</p>
+        <div class="cmd"><code>python .claude\skills\model-standards\scripts\check_names.py</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-say"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Say</span>
+        <p>The script checks what can be checked exactly. qty or ProductName are the agent&#x27;s job.</p>
+      </div></li>
+    </ol>
+    <p class="run-f"><b>If it goes wrong:</b> It forgets to run the script: point at “Before you finish”. That&#x27;s the case for hooks, next.</p>
+  </aside>
+  <aside class="notes">Run it yourself first: python .claude/skills/model-standards/scripts/check_names.py. 22 problems.
+Then the prompt: Tidy up the DimProduct table. At the end the agent runs the script, because the "Before you finish" section asks it to, and fixes what it finds.
+Say: The script reads every file. The agent reads a short list. Only the rules I can check exactly are in the script. qty or ProductName are the agent's job.</aside>
+</section>
+
+<!-- 12 hooks -->
+<section class="panel has-run" id="hooks" data-theme="light" data-tab="4" aria-labelledby="h-hooks">
+  <header>
+    <div class="hbtns"><button class="demo-btn" type="button" title="Show or hide the demo steps (D)"><i>▸</i>Live demo 4</button><button class="pop-btn" type="button" title="Open the demo steps in their own window (P)">⧉ Pop out</button><button class="ex-btn" type="button" data-ex="hooks" title="Open the exercise (E)"><i>▶</i>Exercise</button></div>
+    <p class="eyebrow rv">04 · Hooks</p>
+    <h2 id="h-hooks" class="rv" style="--d:80ms">Hooks: rules the harness enforces</h2>
+    <p class="lead rv" style="--d:160ms">A hook is a script the harness runs by itself at a set moment. The agent doesn't choose it and can't skip it.</p>
+  </header>
+  <div class="body hooks">
+    <p class="lane-h rv" style="--d:220ms">Before every call to the Power BI MCP server</p>
+    <div class="lane">
+      <div class="node act rv" style="--d:300ms"><b>Connect to Sales [Prod]</b><span>The agent tries</span></div>
+      <svg viewBox="0 0 56 20" preserveAspectRatio="none" aria-hidden="true" class="rv" style="--d:520ms;--fy:0px"><line x1="4" y1="10" x2="46" y2="10"/><polygon points="44,4 54,10 44,16"/></svg>
+      <div class="node hook rv" style="--d:650ms"><code>no_production.py</code><span>Mentions “Sales [Prod]”? Exit code 2.</span></div>
+      <svg viewBox="0 0 56 20" preserveAspectRatio="none" aria-hidden="true" class="rv" style="--d:900ms;--fy:0px"><line x1="4" y1="10" x2="46" y2="10"/><polygon points="44,4 54,10 44,16"/></svg>
+      <div class="node res stop rv" style="--d:1050ms;--fx:16px;--fy:0px"><b>✕ Blocked</b><span>The call never reaches Power BI</span></div>
+    </div>
+    <p class="lane-h rv" style="--d:1250ms">After every file edit</p>
+    <div class="lane">
+      <div class="node act rv" style="--d:1330ms"><b>Adds measure total_returns</b><span>The agent edits Sales.tmdl</span></div>
+      <svg viewBox="0 0 56 20" preserveAspectRatio="none" aria-hidden="true" class="rv" style="--d:1550ms;--fy:0px"><line x1="4" y1="10" x2="46" y2="10"/><polygon points="44,4 54,10 44,16"/></svg>
+      <div class="node hook rv" style="--d:1680ms"><code>check_names.py --hook</code><span>Problems in that file? Exit code 2.</span></div>
+      <svg viewBox="0 0 56 20" preserveAspectRatio="none" aria-hidden="true" class="rv" style="--d:1930ms;--fy:0px"><line x1="4" y1="10" x2="46" y2="10"/><polygon points="44,4 54,10 44,16"/></svg>
+      <div class="node res fix rv" style="--d:2080ms;--fx:16px;--fy:0px"><b>✓ Agent fixes it</b><span>Total Returns, with a description</span></div>
+    </div>
+    <div class="exit rv" style="--d:2300ms">
+      <span><b>Exit code 2</b> stops the action and shows the hook's message to the agent.</span>
+      <span>Hooks live in <code>.claude/settings.json</code>: a feature of the harness, not of the skill standard.</span>
+      <button class="btn replay" type="button" style="margin-left:auto">↻ Replay</button>
+    </div>
+  </div>
+  <aside class="run rv" style="--d:200ms;--fx:24px;--fy:0px" aria-label="How to run Live demo 4">
+    <div class="run-h"><b>Live demo 4</b><button class="btn copyall" type="button">Copy all prompts</button><small>stage-4 · about 6 min</small></div>
+    <ol class="steps">
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Reset to stage-4</p>
+        <div class="cmd"><code>powershell -File demo\reset.ps1 stage-4</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-vs"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">VS Code</span>
+        <p>Show the two hooks</p>
+        <div class="cmd"><code>code .claude\settings.json</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-vs"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">VS Code</span>
+        <p>Show the production check</p>
+        <div class="cmd"><code>code .claude\hooks\no_production.py</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-cc"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Claude Code</span>
+        <div class="cmd"><code>/clear</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-prompt"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Prompt 1</span>
+        <div class="cmd"><code>Use the powerbi-modeling MCP server to connect to the semantic model named &quot;Sales [Prod]&quot;. Call the connect tool directly; don&#x27;t list models first.</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Watch for</span>
+        <p>Stopped by the hook&#x27;s message; it offers Sales [Dev]. Needs the MCP server.</p>
+      </div></li>
+      <li class="step s-prompt"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Prompt 2</span>
+        <div class="cmd"><code>Add a measure total_returns that counts returned lines.</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Watch for</span>
+        <p>Right after the edit: “has an underscore”, “has no description”. It fixes both.</p>
+      </div></li>
+      <li class="step s-say"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Say</span>
+        <p>An instruction is a request. A hook is a rule the harness enforces.</p>
+      </div></li>
+    </ol>
+    <p class="run-f"><b>If it goes wrong:</b> The MCP server won&#x27;t connect: show no_production.py and go straight to prompt 2.</p>
+  </aside>
+  <aside class="notes">Open .claude/settings.json: one hook before every call to the MCP server, one after every file edit. Then open .claude/hooks/no_production.py: ten lines, mentions Sales [Prod] -> message and exit 2.
+Prompt 1 needs the MCP server. The agent is stopped with the message and offers Sales [Dev]. The model doesn't have to exist. Write the name exactly "Sales [Prod]": the check is case-sensitive.
+Prompt 2: right after the edit, the hook's message appears ("has an underscore", "has no description") and the agent corrects itself.
+If the MCP server won't connect: show the hook's code and go straight to prompt 2.
+Say: An instruction is a request. A hook is a rule the harness enforces.</aside>
+</section>
+
+<!-- 13 sub-agents -->
+<section class="panel has-run" id="subagents" data-theme="light" data-tab="5" aria-labelledby="h-subs">
+  <header>
+    <div class="hbtns"><button class="demo-btn" type="button" title="Show or hide the demo steps (D)"><i>▸</i>Live demo 5</button><button class="pop-btn" type="button" title="Open the demo steps in their own window (P)">⧉ Pop out</button><button class="ex-btn" type="button" data-ex="subagents" title="Open the exercise (E)"><i>▶</i>Exercise</button></div>
+    <p class="eyebrow rv">05 · Sub-agents</p>
+    <h2 id="h-subs" class="rv" style="--d:80ms">In one place, then in parallel</h2>
+    <p class="lead rv" style="--d:160ms">Dependent work stays with one agent. Independent work fans out, one sub-agent per table.</p>
+  </header>
+  <div class="body subs">
+    <div class="box rv" style="--d:240ms;--fx:-24px;--fy:0px">
+      <span class="tag">First</span>
+      <h3>Rename in one place</h3>
+      <ul class="rules">
+        <li>A rename touches several files: relationships, measures, <code>model.tmdl</code>.</li>
+        <li>Parallel renames would collide.</li>
+        <li style="color:var(--text);font-weight:500">Dependent work stays in one agent.</li>
+      </ul>
+    </div>
+    <div class="fan">
+      <div class="main rv" style="--d:420ms"><b>Main agent</b><small>Then: document every table</small></div>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" class="rv" style="--d:600ms;--fy:0px">
+        <path d="M0 50 C50 50 50 12 100 12"/>
+        <path d="M0 50 C50 50 50 37.5 100 37.5"/>
+        <path d="M0 50 C50 50 50 62.5 100 62.5"/>
+        <path d="M0 50 C50 50 50 88 100 88"/>
+      </svg>
+      <div class="sa rv" style="--d:900ms;grid-row:1"><small>table-documenter</small><b>Customer</b></div>
+      <div class="sa flag rv" style="--d:960ms;grid-row:2"><small>table-documenter</small><b>Product</b></div>
+      <div class="sa rv" style="--d:1020ms;grid-row:3"><small>table-documenter</small><b>Date</b></div>
+      <div class="sa rv" style="--d:1080ms;grid-row:4"><small>table-documenter</small><b>Sales</b></div>
+      <p class="sum rv" style="--d:1500ms;grid-row:1">3-line summary</p>
+      <p class="sum flag rv" style="--d:1800ms;grid-row:2">“BIK, ACC, CLO: not in the glossary”</p>
+      <p class="sum rv" style="--d:1600ms;grid-row:3">3-line summary</p>
+      <p class="sum rv" style="--d:1700ms;grid-row:4">3-line summary</p>
+    </div>
+  </div>
+  <aside class="run rv" style="--d:200ms;--fx:24px;--fy:0px" aria-label="How to run Live demo 5">
+    <div class="run-h"><b>Live demo 5</b><button class="btn copyall" type="button">Copy all prompts</button><small>stage-5 · about 8 min</small></div>
+    <ol class="steps">
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Reset to stage-5</p>
+        <div class="cmd"><code>powershell -File demo\reset.ps1 stage-5</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-cc"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Claude Code</span>
+        <div class="cmd"><code>/clear</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-prompt"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Prompt 1</span>
+        <div class="cmd"><code>Rename all tables, columns and measures to our standard.</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-say"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Say</span>
+        <p>Renames touch several files at once. So no parallel work here.</p>
+      </div></li>
+      <li class="step s-prompt"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Prompt 2</span>
+        <div class="cmd"><code>Use table-documenter on every table in Sales.SemanticModel in parallel, and summarise what was unclear.</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Watch for</span>
+        <p>Four sub-agents, four short summaries. Product flags BIK, ACC and CLO.</p>
+      </div></li>
+      <li class="step s-vs"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">VS Code</span>
+        <p>Show the skills line</p>
+        <div class="cmd"><code>code .claude\agents\table-documenter.md</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-say"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Say</span>
+        <p>Each sub-agent read a whole table. My conversation got three lines per table.</p>
+      </div></li>
+    </ol>
+    <p class="run-f"><b>If it goes wrong:</b> It runs them one after another: say “in parallel” again, or show one sub-agent and move on.</p>
+  </aside>
+  <aside class="notes">Prompt 1, the dependent work in one place. Say: Renames touch several files at once, relationships and measures. So no parallel work here.
+Prompt 2: four sub-agents start, each edits one file, four short summaries come back.
+Product will most likely say it doesn't know what BIK, ACC and CLO mean. That's planted.
+Say: Each sub-agent read a whole table. My conversation got three lines per table.</aside>
+</section>
+
+<!-- 14 combine -->
+<section class="panel" id="combine" data-theme="light" data-tab="5" aria-labelledby="h-combine">
+  <header>
+    <p class="eyebrow rv">05 · Sub-agents</p>
+    <h2 id="h-combine" class="rv" style="--d:80ms">Two ways to combine skills and sub-agents</h2>
+    <p class="lead rv" style="--d:160ms">Shown in Claude Code. Other harnesses do this differently, or not yet.</p>
+  </header>
+  <div class="body combo">
+    <div class="box rv" style="--d:260ms">
+      <span class="tag">Give a sub-agent the skill</span>
+      <p class="file">.claude/agents/table-documenter.md</p>
+<pre class="code">---
+name: table-documenter
+tools: Read, Edit, Grep, Glob
+<span class="hl">skills: model-standards</span>
+---</pre>
+      <p>Every sub-agent works to the same standard. The skill is the shared rulebook.</p>
+    </div>
+    <div class="box rv" style="--d:480ms">
+      <span class="tag">Run the skill as a sub-agent</span>
+      <p class="file">.claude/skills/model-review/SKILL.md</p>
+<pre class="code">---
+name: model-review
+description: …
+<span class="hl">context: fork</span>
+---</pre>
+      <p>The skill's long work runs in its own context. Your conversation gets the result, not the reading.</p>
+    </div>
+  </div>
+  <p class="note-line rv" style="--d:700ms"><b style="color:var(--text);font-weight:500">Parallel helps</b> with independent work, one table each. <b style="color:var(--text);font-weight:500">It multiplies mistakes</b> with anything that touches the same files.</p>
+  <aside class="notes">Open .claude/agents/table-documenter.md. The skills line is why all four worked to the same standard.
+The other direction: a skill that runs as a sub-agent, with context: fork in the header. Good for long reviews that would otherwise fill the main conversation.</aside>
+</section>
+
+<!-- 15 learning loop -->
+<section class="panel has-run" id="learning" data-theme="light" data-tab="6" aria-labelledby="h-learn">
+  <header>
+    <div class="hbtns"><button class="demo-btn" type="button" title="Show or hide the demo steps (D)"><i>▸</i>Live demo 6</button><button class="pop-btn" type="button" title="Open the demo steps in their own window (P)">⧉ Pop out</button><button class="ex-btn" type="button" data-ex="learning" title="Open the exercise (E)"><i>▶</i>Exercise</button></div>
+    <p class="eyebrow rv">06 · Learning loop</p>
+    <h2 id="h-learn" class="rv" style="--d:80ms">A skill that learns</h2>
+    <p class="lead rv" style="--d:160ms">At the end of each task the agent proposes what the skill was missing. You decide.</p>
+  </header>
+  <div class="body loop">
+    <svg viewBox="0 0 560 420" aria-label="The loop: do the task, propose what was missing, you approve or reject, added to a reference file" class="rv" style="--d:240ms">
+      <ellipse class="ring" cx="280" cy="210" rx="200" ry="150"/>
+      <circle class="dot" r="9"><animateMotion dur="7s" repeatCount="indefinite" path="M280 60 A200 150 0 1 1 279.9 60"/></circle>
+      <rect x="170" y="32" width="220" height="56" fill="#1F1F1F"/><text x="280" y="61">Do the task</text>
+      <rect x="370" y="182" width="190" height="56" fill="#1F1F1F"/><text x="465" y="211">Propose additions</text>
+      <rect x="160" y="332" width="240" height="56" fill="#C514B4"/><text x="280" y="361">You approve or reject</text>
+      <rect x="0" y="182" width="190" height="56" fill="#1F1F1F"/><text x="95" y="211">Into a reference file</text>
+    </svg>
+    <div class="box rv" style="--d:480ms">
+      <span class="tag">SKILL.md</span>
+<pre class="code">## After each task
+List conventions you met that aren't
+in this skill, and mistakes you corrected.
+Propose each as an addition to the
+right reference file, with one example.
+<span class="hl">Don't change this skill until I approve.</span></pre>
+    </div>
+  </div>
+  <aside class="run rv" style="--d:200ms;--fx:24px;--fy:0px" aria-label="How to run Live demo 6">
+    <div class="run-h"><b>Live demo 6</b><button class="btn copyall" type="button">Copy all prompts</button><small>stage-6 · about 6 min</small></div>
+    <ol class="steps">
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Reset to stage-6</p>
+        <div class="cmd"><code>powershell -File demo\reset.ps1 stage-6</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-cc"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Claude Code</span>
+        <div class="cmd"><code>/clear</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-prompt"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Prompt 1</span>
+        <div class="cmd"><code>Document the DimProduct table.</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-watch"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Watch for</span>
+        <p>At the end, under “After each task”, it proposes adding BIK, ACC and CLO to glossary.md.</p>
+      </div></li>
+      <li class="step s-prompt"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Prompt 2</span>
+        <div class="cmd"><code>Approve the glossary addition: BIK is bikes, ACC accessories, CLO clothing. Reject the rest.</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Show the skill&#x27;s own diff</p>
+        <div class="cmd"><code>git diff .claude</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-vs"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">VS Code</span>
+        <p>Show the decision log</p>
+        <div class="cmd"><code>code .claude\skills\model-standards\references\decisions.md</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-say"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Say</span>
+        <p>The skill got better from the work, and I decided what went in.</p>
+      </div></li>
+    </ol>
+    <p class="run-f"><b>If it goes wrong:</b> No proposal appears: ask “Anything this skill should learn from that task?”</p>
+  </aside>
+  <aside class="notes">Continue after demo 5, or run a short documentation task on Product.
+Under "After each task", the agent proposes adding the category codes to glossary.md.
+Then the prompt.
+Say: The skill got better from the work, and I decided what went in.</aside>
+</section>
+
+<!-- 16 docs -->
+<section class="panel" id="docs" data-theme="light" data-tab="6" aria-labelledby="h-docs">
+  <header>
+    <p class="eyebrow rv">06 · Learning loop</p>
+    <h2 id="h-docs" class="rv" style="--d:80ms">The documentation writes itself</h2>
+    <p class="lead rv" style="--d:160ms">Every change to the skill is a commit you can review and roll back.</p>
+  </header>
+  <div class="body docs">
+    <div class="box rv" style="--d:240ms">
+      <p class="file">references/glossary.md</p>
+<pre class="code">  | Business term | In the model      |
+  | Net Sales     | excludes returns  |
+<span class="add">+ | Category BIK  | Bikes             |
++ | Category ACC  | Accessories       |
++ | Category CLO  | Clothing          |</span></pre>
+    </div>
+    <div class="box rv" style="--d:440ms">
+      <p class="file">references/decisions.md</p>
+<pre class="code">2026-11-03: Net Sales excludes
+returned lines (Is Return = 1).
+<span class="m">Agreed with finance, because their
+monthly report shows sales after
+returns.</span></pre>
+    </div>
+    <p class="say rv" style="--d:700ms"><b style="font-weight:600">The glossary</b> feeds the descriptions. <b style="font-weight:600">The decision log</b> answers “why is it like this?” next year.</p>
+  </div>
+  <div></div>
+  <aside class="notes">Show the glossary diff, then the commit. Also references/decisions.md, with the Net Sales decision and its reason. The skill reads decisions.md before deciding something the glossary doesn't cover.
+Keep the skill in git. Review before it changes itself.</aside>
+</section>
+
+<!-- 17 finale -->
+<section class="panel has-run" id="finale" data-theme="light" aria-labelledby="h-fin">
+  <header>
+    <div class="hbtns"><button class="demo-btn" type="button" title="Show or hide the demo steps (D)"><i>▸</i>Live demo 7</button><button class="pop-btn" type="button" title="Open the demo steps in their own window (P)">⧉ Pop out</button></div>
+    <p class="eyebrow rv">The result</p>
+    <h2 id="h-fin" class="rv" style="--d:80ms">The model in Desktop</h2>
+    <p class="lead rv" style="--d:160ms">Close and reopen Sales.pbip: Desktop picks up file changes on reopen.</p>
+  </header>
+  <div class="body fin">
+    <ul class="checks">
+      <li class="rv" style="--d:260ms"><i>✓</i>Customer, Product, Date and Sales in the field list</li>
+      <li class="rv" style="--d:400ms"><i>✓</i>Keys hidden</li>
+      <li class="rv" style="--d:540ms"><i>✓</i>Measures in Revenue, Profitability and Indicators</li>
+      <li class="rv" style="--d:680ms"><i>✓</i>A description on hover</li>
+      <li class="rv" style="--d:820ms"><i>✓</i>Margin % formatted as a percentage</li>
+    </ul>
+    <div class="box rv" style="--d:1000ms">
+      <span class="tag">Then</span>
+      <h3>Build two visuals</h3>
+      <ul class="rules">
+        <li>A card with Net Sales</li>
+        <li>A bar chart of Margin % by Category</li>
+      </ul>
+    </div>
+  </div>
+  <aside class="run rv" style="--d:200ms;--fx:24px;--fy:0px" aria-label="How to run Live demo 7">
+    <div class="run-h"><b>Live demo 7</b><button class="btn copyall" type="button">Copy all prompts</button><small>fallback-clean · about 4 min</small></div>
+    <ol class="steps">
+      <li class="step s-term"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Terminal</span>
+        <p>Jump to the model with everything applied</p>
+        <div class="cmd"><code>powershell -File demo\reset.ps1 fallback-clean</code><button class="btn copy" type="button">Copy</button></div>
+      </div></li>
+      <li class="step s-desk"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Power BI Desktop</span>
+        <p>Close and reopen Sales.pbip. Desktop picks up file changes on reopen.</p>
+      </div></li>
+      <li class="step s-desk"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Power BI Desktop</span>
+        <p>Field list: four tables, hidden keys, the three folders. Hover a measure for its description.</p>
+      </div></li>
+      <li class="step s-desk"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Power BI Desktop</span>
+        <p>Build a card with Net Sales, and a bar chart of Margin % by Category.</p>
+      </div></li>
+      <li class="step s-say"><button class="no" type="button" aria-label="Mark step done"></button><div>
+        <span class="k">Say</span>
+        <p>Same model as an hour ago. Now Copilot and data agents can read it.</p>
+      </div></li>
+    </ol>
+    <p class="run-f"><b>If it goes wrong:</b> Desktop won&#x27;t open it: show the TMDL diff against stage-0 in VS Code.</p>
+  </aside>
+  <aside class="notes">Walk the field list: four business tables, hidden keys, the three folders, hover for a description, Margin % as a percentage. Build a card with Net Sales and a bar chart of Margin % by Category.
+Point worth saying: renaming in TMDL doesn't update report visuals. Fine here, the report is empty. In real projects rename through Desktop or the MCP server, or update the report too. The skill says so.</aside>
+</section>
+
+<!-- 18 toolbox -->
+<section class="panel" id="toolbox" data-theme="light" aria-labelledby="h-tool">
+  <header>
+    <p class="eyebrow rv">Recap</p>
+    <h2 id="h-tool" class="rv" style="--d:80ms">The whole toolbox</h2>
+  </header>
+  <div class="body tblwrap">
+    <table class="tbl rv" style="--d:200ms">
+      <thead><tr><th>Piece</th><th>What it does</th><th>Where it lives</th><th>Part of</th></tr></thead>
+      <tbody>
+        <tr data-go="skill"><td><span>01</span>Description</td><td>Decides when the skill loads</td><td class="w">SKILL.md header</td><td class="std">The skill standard</td></tr>
+        <tr data-go="references"><td><span>02</span>References</td><td>Long rules, read only when needed</td><td class="w">references/</td><td class="std">The skill standard</td></tr>
+        <tr data-go="scripts"><td><span>03</span>Scripts</td><td>Exact checks, same answer every time</td><td class="w">scripts/</td><td class="std">The skill standard</td></tr>
+        <tr data-go="hooks"><td><span>04</span>Hooks</td><td>Rules the harness enforces on calls and edits</td><td class="w">.claude/settings.json</td><td class="std">The harness</td></tr>
+        <tr data-go="subagents"><td><span>05</span>Sub-agents</td><td>Independent work in parallel, own context</td><td class="w">.claude/agents/</td><td class="std">The harness</td></tr>
+        <tr data-go="learning"><td><span>06</span>Learning loop</td><td>Proposes additions; you approve</td><td class="w">“After each task” + references/</td><td class="std">The skill standard</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div></div>
+  <aside class="notes">The whole picture on one slide. Every row is a section in the field guide, with a task page in chapter 2 for building it yourself. Half of it is the skill standard, half is the harness: worth saying once.</aside>
+</section>
+
+<!-- 19 monday -->
+<section class="panel" id="monday" data-theme="light" aria-labelledby="h-mon">
+  <header>
+    <div class="hbtns"><button class="ex-btn" type="button" data-ex="monday" title="Open the exercise (E)"><i>▶</i>Exercise</button></div>
+    <p class="eyebrow rv">Take it home</p>
+    <h2 id="h-mon" class="rv" style="--d:80ms">Three things to try yourself</h2>
+  </header>
+  <div class="body monday">
+    <div class="box rv" style="--d:240ms"><span class="num grad-text">1</span><h3>Write one skill for your model standards</h3><p>Spend most of the time on the description. Test it with requests that should, and shouldn't, load it.</p></div>
+    <div class="box rv" style="--d:400ms"><span class="num grad-text">2</span><h3>Move one exact rule into a script</h3><p>Then run it from a hook after every edit, so the agent can't forget.</p></div>
+    <div class="box rv" style="--d:560ms"><span class="num grad-text">3</span><h3>Add “After each task”</h3><p>Review what it proposes for a week. Keep what's true, reject the rest.</p></div>
+  </div>
+  <div></div>
+  <aside class="notes">Three small steps, each one piece from today. Nobody needs all six pieces on day one.</aside>
+</section>
+
+<!-- 20 thanks -->
+<section class="panel thanks" id="thanks" data-theme="brand" aria-labelledby="h-thanks">
+  <div class="th">
+    <div>
+      <p class="eyebrow rv" style="color:#fff;font-weight:700">Advanced Agent Skills for Power BI</p>
+      <h1 id="h-thanks" class="rv" style="--d:120ms;--fy:26px">Thank you.<br>Questions?</h1>
+      <p class="who rv" style="--d:400ms"><b>Mathias Halkjær</b><span>sessionize.com/halkjaer</span></p>
+    </div>
+    <a class="one rv" href="https://mathiashalkjaer.github.io/Presentations/advanced-agent-skills-for-power-bi/" target="_blank" rel="noopener" style="--d:300ms;--fx:40px;--fy:0px">
+      <span class="qr" aria-hidden="true"><svg viewBox="0 0 41 41" class="segno"><path fill="#fff" d="M0 0h41v41h-41z"/><path class="qrline" stroke="#1f1f1f" d="M2 2.5h7m1 0h1m3 0h6m5 0h1m2 0h3m1 0h7m-37 1h1m5 0h1m2 0h1m4 0h1m2 0h1m1 0h1m1 0h2m1 0h3m1 0h1m1 0h1m5 0h1m-37 1h1m1 0h3m1 0h1m2 0h1m1 0h1m1 0h2m2 0h5m1 0h2m2 0h2m1 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m3 0h1m1 0h6m5 0h4m1 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h2m10 0h2m1 0h1m1 0h4m1 0h1m1 0h3m1 0h1m-37 1h1m5 0h1m1 0h1m1 0h2m1 0h2m2 0h1m1 0h1m2 0h1m1 0h1m3 0h1m1 0h1m5 0h1m-37 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-29 1h1m1 0h1m3 0h9m1 0h1m1 0h1m1 0h1m-29 1h1m3 0h1m1 0h7m1 0h2m1 0h1m2 0h5m4 0h5m2 0h1m-34 1h1m3 0h3m1 0h4m3 0h1m2 0h3m1 0h4m3 0h4m-32 1h5m1 0h2m2 0h4m3 0h4m2 0h1m2 0h1m1 0h1m-30 1h2m4 0h1m2 0h1m2 0h3m3 0h1m1 0h1m2 0h2m3 0h1m2 0h2m-35 1h6m1 0h1m1 0h1m1 0h1m1 0h1m2 0h1m1 0h6m2 0h5m2 0h3m-32 1h1m2 0h1m1 0h1m1 0h1m1 0h3m5 0h7m3 0h2m-34 1h7m1 0h3m2 0h1m1 0h4m1 0h1m1 0h2m2 0h2m1 0h1m1 0h4m-35 1h2m7 0h4m1 0h2m1 0h2m2 0h1m4 0h3m2 0h2m1 0h1m-33 1h1m1 0h1m1 0h2m1 0h1m3 0h2m2 0h1m3 0h1m2 0h1m4 0h2m2 0h2m-32 1h1m3 0h2m3 0h3m8 0h1m2 0h2m4 0h4m-36 1h2m2 0h4m1 0h2m3 0h2m4 0h2m1 0h2m1 0h4m3 0h1m-33 1h2m5 0h1m3 0h1m4 0h1m2 0h3m4 0h1m3 0h1m2 0h2m-33 1h1m2 0h1m1 0h1m4 0h5m2 0h4m5 0h3m1 0h2m-35 1h2m1 0h1m4 0h1m2 0h1m3 0h2m1 0h1m2 0h1m1 0h1m2 0h4m1 0h2m-27 1h3m2 0h6m4 0h1m1 0h5m2 0h5m-28 1h1m1 0h2m2 0h2m2 0h1m1 0h3m1 0h2m2 0h6m1 0h2m-34 1h2m1 0h2m2 0h2m2 0h3m1 0h2m1 0h3m1 0h1m2 0h1m1 0h3m1 0h4m-37 1h2m2 0h1m2 0h2m3 0h1m2 0h1m2 0h1m1 0h2m1 0h1m3 0h2m3 0h1m-31 1h1m2 0h3m3 0h1m1 0h3m1 0h2m2 0h5m1 0h1m3 0h1m-29 1h1m3 0h4m2 0h7m1 0h2m3 0h2m1 0h1m3 0h2m1 0h1m-37 1h2m2 0h1m1 0h2m3 0h2m2 0h1m1 0h1m1 0h4m1 0h1m3 0h5m1 0h1m1 0h1m-29 1h1m2 0h2m1 0h4m2 0h1m1 0h2m1 0h2m1 0h1m3 0h1m2 0h1m-36 1h7m1 0h1m1 0h3m2 0h1m1 0h2m4 0h2m1 0h1m1 0h1m1 0h1m1 0h1m-33 1h1m5 0h1m3 0h2m1 0h1m1 0h1m1 0h3m1 0h3m4 0h1m3 0h3m-35 1h1m1 0h3m1 0h1m1 0h2m3 0h1m3 0h1m1 0h1m1 0h2m3 0h1m1 0h7m1 0h1m-37 1h1m1 0h3m1 0h1m2 0h1m3 0h1m1 0h2m1 0h1m4 0h1m2 0h1m2 0h3m1 0h4m-37 1h1m1 0h3m1 0h1m2 0h3m3 0h2m3 0h2m1 0h3m1 0h1m1 0h2m-31 1h1m5 0h1m3 0h3m1 0h1m1 0h6m1 0h2m2 0h1m1 0h1m2 0h1m1 0h2m-36 1h7m1 0h1m2 0h1m1 0h2m2 0h1m2 0h5m2 0h1m1 0h1m1 0h1m2 0h3"/></svg></span>
+      <span class="tx"><b>Everything from today, in one place</b>
+        <span class="items"><span>The slides, with every demo's steps and the exercises</span><span>The field guide, on the web and as a PDF</span><span>The demo project, with one stage per demo</span></span>
+        <code>mathiashalkjaer.github.io/Presentations/advanced-agent-skills-for-power-bi</code></span>
+    </a>
+  </div>
+  <aside class="notes">"Everything there is to know" was a big promise for an hour. But you now know what's beneath the surface, and where to dig next. Questions.</aside>
+</section>
+
+</main>
+
+<footer class="bottombar">
+  <button class="btn" id="prev" type="button">← Previous</button>
+  <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+  <span id="timer" title="Time on this demo (T hides it)"></span>
+  <span class="count" id="count"><b>1</b> / 20</span>
+  <span class="hint">← → move · D demo · P pop out · E exercise · O overview · N notes · F full screen</span>
+  <button class="btn" id="next" type="button">Next →</button>
+</footer>
+
+<div id="ex-back"></div>
+<div id="ex" role="dialog" aria-modal="true" aria-labelledby="ex-title">
+  <div class="ex-h"><p class="eyebrow">Exercise</p><h3 id="ex-title"></h3><span class="chip acc" id="ex-ill">Illustration, not the real agent</span><button class="btn x" type="button" id="ex-close">Close · Esc</button></div>
+  <div class="ex-b" id="ex-body"></div>
+</div>
+<div id="ov" role="dialog" aria-label="All slides"><p class="eyebrow">All slides · click to jump · O or Esc to close</p><div class="grid" id="ov-grid"></div></div>
+
+<div id="drawer" role="note" aria-live="polite"></div>
+
+<script>
+(function(){
+  var panels=[].slice.call(document.querySelectorAll('.panel'));
+  var tabs=[].slice.call(document.querySelectorAll('.tabs a'));
+  var ink=document.getElementById('ink'),bar=document.getElementById('bar'),count=document.getElementById('count');
+  var drawer=document.getElementById('drawer');
+  var cur=-1;
+  function idx(id){for(var k=0;k<panels.length;k++){if(panels[k].id===id)return k;}return -1;}
+  function go(n){
+    n=Math.max(0,Math.min(panels.length-1,n));
+    if(n===cur)return;
+    if(cur>=0)panels[cur].classList.remove('active');
+    cur=n;var p=panels[cur];
+    void p.offsetWidth;p.classList.add('active');
+    document.body.setAttribute('data-theme',p.getAttribute('data-theme')||'light');
+    document.body.setAttribute('data-slide',p.id);
+    if(location.hash.slice(1)!==p.id)history.replaceState(null,'','#'+p.id);
+    var t=parseInt(p.getAttribute('data-tab')||'0',10);
+    // pieces we already have: those before the current one, or all six once past the last
+    var have=t?t-1:(cur>idx('docs')?6:0);
+    tabs.forEach(function(a){var n=parseInt(a.getAttribute('data-tab'),10);a.classList.toggle('on',n===t);a.classList.toggle('done',n<=have);});
+    placeInk();
+    bar.style.width=((cur+1)/panels.length*100)+'%';
+    count.innerHTML='<b>'+(cur+1)+'</b> / '+panels.length;
+    var note=p.querySelector('.notes');
+    if(window.onSlide)window.onSlide(p);
+    drawer.innerHTML='<span class="tag">Notes · '+(cur+1)+'</span>'+(note?note.textContent.replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}):'');
+  }
+  function goId(id){var k=idx(id);if(k>=0)go(k);}
+  document.getElementById('prev').addEventListener('click',function(){go(cur-1);});
+  document.getElementById('next').addEventListener('click',function(){go(cur+1);});
+  document.addEventListener('keydown',function(e){
+    if(e.target.closest&&e.target.closest('input,textarea'))return;
+    var k=e.key;
+    if(k==='ArrowRight'||k==='PageDown'||k===' '){e.preventDefault();go(cur+1);}
+    else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();go(cur-1);}
+    else if(k==='Home'){go(0);}else if(k==='End'){go(panels.length-1);}
+    else if(k==='n'||k==='N'){drawer.classList.toggle('open');}
+    else if(k==='f'||k==='F'){if(!document.fullscreenElement){document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();}else{document.exitFullscreen();}}
+  });
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('a[href^="#"]');
+    if(a){e.preventDefault();goId(a.getAttribute('href').slice(1));return;}
+    var r=e.target.closest('tr[data-go]');if(r){goId(r.getAttribute('data-go'));return;}
+    var c=e.target.closest('.copy');
+    if(c){var code=c.parentNode.querySelector('code').textContent;
+      var done=function(){c.textContent='Copied';c.classList.add('ok');setTimeout(function(){c.textContent='Copy';c.classList.remove('ok');},1600);};
+      if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(code).then(done,function(){fallback(code);done();});}else{fallback(code);done();}
+      return;}
+    var st=e.target.closest('.step .no');if(st){var li=st.parentNode;li.classList.toggle('done');var nx=li.nextElementSibling;if(li.classList.contains('done')&&nx){nx.scrollIntoView({block:'nearest',behavior:'smooth'});}return;}
+    var rp=e.target.closest('.replay');
+    if(rp){var p=panels[cur];p.classList.remove('active');void p.offsetWidth;requestAnimationFrame(function(){p.classList.add('active');});}
+  });
+  function fallback(t){var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);}
+  window.addEventListener('hashchange',function(){goId(location.hash.slice(1));});
+  function placeInk(){var on=document.querySelector('.tabs a.on');if(on){ink.style.left=on.offsetLeft+'px';ink.style.width=on.offsetWidth+'px';ink.style.opacity=1;}else{ink.style.opacity=0;}}
+  window.addEventListener('resize',placeInk);
+  window.deck={go:go,goId:goId,cur:function(){return cur;},panels:panels};
+  var start=idx(location.hash.slice(1));
+  go(start>=0?start:0);
+})();
+</script>
+
+<script>
+(function(){
+var body=document.body,ex=document.getElementById('ex'),exBody=document.getElementById('ex-body'),exTitle=document.getElementById('ex-title'),exIll=document.getElementById('ex-ill');
+function h(tag,attrs,html){var e=document.createElement(tag);if(attrs)for(var k in attrs){if(k==='class')e.className=attrs[k];else e.setAttribute(k,attrs[k]);}if(html!=null)e.innerHTML=html;return e;}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function copyText(text,btn){var done=function(){if(!btn)return;var o=btn.textContent;btn.textContent='Copied';btn.classList.add('ok');setTimeout(function(){btn.textContent=o;btn.classList.remove('ok');},1500);};
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done,function(){fb(text);done();});}else{fb(text);done();}}
+function fb(t){var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);}
+
+/* ===== 1. before / after ===== */
+var BA=[
+ ['t','DimCustomer','','Customer','',''],
+ ['c','cust_id','visible','Customer Key','hidden','Key that links a customer to their sales.'],
+ ['c','cust_name','','Customer Name','','The customer\'s company name.'],
+ ['c','cust_country','','Country','Location','Country the customer is invoiced in.'],
+ ['c','CustSegment','','Segment','','Customer segment: Enterprise, Mid-market or Small business.'],
+ ['t','DimProduct','','Product','',''],
+ ['c','ProductName','','Product Name','','The product\'s name as shown on invoices.'],
+ ['c','prod_category','','Category','','Product category code: BIK bikes, ACC accessories, CLO clothing.'],
+ ['c','list_price','','List Price','Pricing · #,0.00','Price before discounts, in EUR.'],
+ ['t','FactSales','','Sales','',''],
+ ['c','TotalSales','','Total Sales','Revenue · #,0','Invoiced sales in EUR, including lines that were later returned.'],
+ ['c','total_cost','','Total Cost','Profitability · #,0','Cost of the goods sold, in EUR.'],
+ ['c','Margin','0.31','Margin %','Profitability · 31.0%','Gross margin: sales minus cost, as a share of sales.'],
+ ['c','NetSales','','Net Sales','Revenue · #,0','Sales excluding returned lines. Finance\'s headline number.'],
+ ['c','Sales Status','IF(IF())','Sales Status','Indicators','High above 50,000 EUR of sales, Medium above 20,000, otherwise Low.'],
+ ['c','qty','','Quantity','Order details','Units on the order line.']
+];
+function exJob(root){
+  root.innerHTML='<p class="hint">Drag down the model to clean it up, top to bottom. Click any field to see what Copilot or a data agent gets to read.</p>'+
+  '<div class="ba-wrap"><div class="ba" style="--y:32%"><div class="layer messy"></div><div class="layer clean"></div><span class="handle"></span></div>'+
+  '<div class="ba-side"><p class="lbl">What Copilot reads</p><div class="reads"><p>Click a field.</p></div></div></div>';
+  var ba=root.querySelector('.ba'),m=root.querySelector('.messy'),c=root.querySelector('.clean'),reads=root.querySelector('.reads');
+  BA.forEach(function(r,i){
+    var cls='row '+r[0];
+    m.appendChild(h('div',{'class':cls,'data-i':i,'data-s':'m'},'<span>'+esc(r[1])+'</span><em>'+(r[0]==='c'?esc(r[2]||'no description'):'')+'</em>'));
+    c.appendChild(h('div',{'class':cls,'data-i':i,'data-s':'c'},'<span>'+esc(r[3])+'</span><em>'+esc(r[4])+'</em>'));
+  });
+  var drag=false;
+  function setX(ev){var r=ba.getBoundingClientRect();var y=Math.max(0,Math.min(100,(ev.clientY-r.top)/r.height*100));ba.style.setProperty('--y',y+'%');}
+  ba.addEventListener('pointerdown',function(ev){if(ev.target.closest('.row'))return;drag=true;ba.setPointerCapture(ev.pointerId);setX(ev);});
+  ba.addEventListener('pointermove',function(ev){if(drag)setX(ev);});
+  ba.addEventListener('pointerup',function(){drag=false;});
+  ba.addEventListener('click',function(ev){var row=ev.target.closest('.row');if(!row)return;
+    root.querySelectorAll('.row.sel').forEach(function(x){x.classList.remove('sel');});row.classList.add('sel');
+    var r=BA[+row.getAttribute('data-i')];
+    if(row.getAttribute('data-s')==='m'){
+      reads.className='reads bad';
+      reads.innerHTML='<b class="mono">'+esc(r[1])+'</b><p>'+(r[0]==='t'?'A table named after how it was built, not what it holds.':'No description, no folder, no format. Copilot has to guess what <span class="mono">'+esc(r[1])+'</span> means.')+'</p>';
+    } else {
+      reads.className='reads good';
+      reads.innerHTML='<b>'+esc(r[3])+'</b><p>'+(r[0]==='t'?'A business noun: what the table holds.':esc(r[5]))+'</p>'+(r[4]?'<div class="meta"><span class="chip">'+esc(r[4])+'</span></div>':'');
+    }});
+}
+
+/* ===== 2. will the skill load? ===== */
+var STOP='a an the and or for of our to in on with when use using is it its this that be by as at from me my you your please can could would should do does what how which some any into than then them they we i there here about all every more most also just helps help'.split(' ');
+function stem(w){w=w.toLowerCase().replace(/[^a-z0-9]/g,'');if(w.length>4&&/ing$/.test(w))w=w.slice(0,-3);else if(w.length>4&&/ies$/.test(w))w=w.slice(0,-3)+'y';else if(w.length>4&&/es$/.test(w))w=w.slice(0,-2);else if(w.length>3&&/s$/.test(w))w=w.slice(0,-1);else if(w.length>4&&/ed$/.test(w))w=w.slice(0,-2);if(w.length>3&&/e$/.test(w))w=w.slice(0,-1);return w;}
+var DESC={vague:'Helps with Power BI.',sharp:'Naming, display folder, description and DAX conventions for our Power BI semantic models. Use when creating, renaming, tidying, documenting or reviewing tables, columns or measures in a PBIP or TMDL project, when writing or fixing DAX measures, or when preparing a model for Copilot or data agents.'};
+var REQS=['Tidy up the column names in DimCustomer.','Fix the nested IF in the Sales Status measure.','Write a DAX measure for sales last year.','Make a Power BI bar chart of sales by country.','Document the DimProduct table.','What time does the next train to Milan leave?'];
+function words(s){return s.split(/(\s+|[.,:;!?()"'])/);}
+function keyset(s){var k={};s.split(/[^A-Za-z0-9]+/).forEach(function(w){var st=stem(w);if(st&&STOP.indexOf(w.toLowerCase())<0&&st.length>1)k[st]=1;});return k;}
+function hl(s,keys){return words(s).map(function(w){var st=stem(w);return (st&&keys[st]&&STOP.indexOf(w.toLowerCase())<0)?'<mark>'+esc(w)+'</mark>':esc(w);}).join('');}
+function exFound(root){
+  root.innerHTML='<p class="hint">Pick a request, or type one from the room. The page matches words; the real agent uses judgement, so read this as a picture of the idea, not a prediction.</p>'+
+  '<div class="cols"><div><p class="lbl">Description</p><div class="seg" id="mt-d"><button type="button" data-d="vague">Stage 1 · vague</button><button type="button" data-d="sharp" class="on">Stage 2 · sharp</button></div>'+
+  '<div class="mt-desc" id="mt-desc" style="margin-top:.6rem"></div>'+
+  '<p class="lbl" style="margin-top:1rem">Request</p><input type="text" id="mt-in" autocomplete="off"><div class="chips" id="mt-chips"></div></div>'+
+  '<div><p class="lbl">What the agent reads</p><p class="mt-verdict" id="mt-v"></p><div class="lv mt-lv"><div class="l1 on"><span class="n">1</span><b>Name and description</b><span class="d">Of every skill</span><em class="when">Always</em></div><div class="l2"><span class="n">2</span><b>The rest of SKILL.md</b><span class="d">The instructions</span><em class="when">When a request matches</em></div><div class="l3"><span class="n">3</span><b>References and scripts</b><span class="d" id="mt-l3">The files SKILL.md points to</span><em class="when">Only when the instructions say so</em></div></div></div></div>';
+  var d='sharp',inp=root.querySelector('#mt-in');
+  var ch=root.querySelector('#mt-chips');REQS.forEach(function(r){var b=h('button',{'class':'chip',type:'button'},esc(r));b.onclick=function(){inp.value=r;run();};ch.appendChild(b);});
+  root.querySelectorAll('#mt-d button').forEach(function(b){b.onclick=function(){d=b.getAttribute('data-d');root.querySelectorAll('#mt-d button').forEach(function(x){x.classList.toggle('on',x===b);});run();};});
+  inp.addEventListener('input',run);
+  function run(){
+    var req=inp.value.trim(),rk=keyset(req),dk=keyset(DESC[d]),hit={},n=0;
+    for(var k in rk){if(dk[k]){hit[k]=1;n++;}}
+    root.querySelector('#mt-desc').innerHTML=hl(DESC[d],hit);
+    var v=root.querySelector('#mt-v'),l2=root.querySelector('.l2'),l3=root.querySelector('.l3'),l3t=root.querySelector('#mt-l3');
+    var n2=n-(hit.power?1:0)-(hit.bi?1:0);var strong=n2>=1;
+    var loads=req&&n>0;
+    l2.classList.toggle('on',!!loads);
+    var refs=[];
+    if(loads&&strong){if(/\b(dax|measure|if|switch|calculate|formula|sales last year|ly)\b/i.test(req))refs.push('references/dax-style.md');
+      if(/\b(document|describe|description|glossary)/i.test(req))refs.push('references/glossary.md');
+      if(/\b(tidy|rename|renam|fix|document|add|write|clean)/i.test(req))refs.push('scripts/check_names.py, before finishing');}
+    l3.classList.toggle('on',refs.length>0);l3t.textContent=refs.length?refs.join(' · '):'The files SKILL.md points to';
+    if(!req){v.textContent='Type or pick a request.';}
+    else if(!loads){v.innerHTML='The skill stays on the shelf. <span style="color:var(--muted)">No overlap with the description.</span>';}
+    else if(!strong){v.innerHTML='It might load, for the wrong reason: <mark>Power BI</mark> is the only overlap.';}
+    else{v.innerHTML='The skill loads. '+n2+' task word'+(n2>1?'s':'')+' in common with the description.';}
+  }
+  inp.value=REQS[0];run();setTimeout(function(){inp.focus();inp.select();},50);
+}
+
+/* ===== 3. what's in the context? ===== */
+var CX=[
+ {id:'sys',label:'Instructions + chat',c:'#8A868C'},
+ {id:'hdr',label:'Skill headers',c:'#C514B4'},
+ {id:'skill',label:'SKILL.md',c:'#1F1F1F'},
+ {id:'ref',label:'dax-style.md',c:'#57545C'},
+ {id:'out',label:'Script output',c:'#2B7A4B'},
+ {id:'hook',label:'Hook message',c:'#B23C18'},
+ {id:'sum',label:'4 × 3-line summaries',c:'#D53B91'},
+ {id:'allsk',label:'Every skill, in full',c:'#4A1042'},
+ {id:'allref',label:'Every reference file',c:'#57545C'},
+ {id:'tables',label:'All four tables',c:'#F05027'}
+];
+var CXS=[
+ {n:'Start',v:{sys:8,hdr:3},say:'A new conversation: your request plus one or two lines per installed skill. That\'s all the agent sees of the skills.'},
+ {n:'01 Description',v:{sys:10,hdr:3,skill:9},say:'The request matches model-standards, so its SKILL.md is read. The other skills stay as headers.'},
+ {n:'02 References',v:{sys:12,hdr:3,skill:9,ref:10},say:'There\'s DAX to write, so dax-style.md is read. For a rename, this slice never appears.'},
+ {n:'03 Scripts',v:{sys:14,hdr:3,skill:9,ref:10,out:3},say:'The script reads every TMDL file; the agent only reads its short list of problems. The script\'s code never enters the context.'},
+ {n:'04 Hooks',v:{sys:15,hdr:3,skill:9,ref:10,out:3,hook:1},say:'A hook costs one line, and only when it fires. Its code lives in the harness, not in the context.'},
+ {n:'05 Sub-agents',v:{sys:16,hdr:3,skill:9,ref:10,out:3,hook:1,sum:4},subs:true,say:'Each sub-agent reads a whole table in its own context. The main conversation gets three lines per table.'},
+ {n:'Without all this',v:{sys:10,allsk:18,allref:22,tables:45},say:'One big prompt with every rule, every reference and every table pasted in. The context is nearly full before the work starts, and the agent pays attention to all of it, every time.'}
+];
+function exPieces(root){
+  root.innerHTML='<p class="hint">Step through the session and watch what the agent actually has in its context. The sizes are illustrative, not measured.</p>'+
+  '<div class="cx-steps"></div><p class="lbl">The main conversation\'s context</p><div class="cx-bar" id="cx-bar"></div><p class="cx-fill" id="cx-fill"></p>'+
+  '<p class="cx-say" id="cx-say"></p><div class="cx-subs" id="cx-subs" style="opacity:0"><div>Customer sub-agent<i style="width:80%"></i></div><div>Product sub-agent<i style="width:95%"></i></div><div>Date sub-agent<i style="width:60%"></i></div><div>Sales sub-agent<i style="width:100%"></i></div></div><div class="cx-legend" id="cx-leg"></div>';
+  var bar=root.querySelector('#cx-bar'),steps=root.querySelector('.cx-steps'),leg=root.querySelector('#cx-leg');
+  CX.forEach(function(s){bar.appendChild(h('span',{'data-id':s.id,style:'background:'+s.c},esc(s.label)));leg.appendChild(h('p',{'data-id':s.id},'<i style="background:'+s.c+'"></i>'+esc(s.label)));});
+  CXS.forEach(function(s,i){var b=h('button',{type:'button'},esc(s.n));b.onclick=function(){show(i);};steps.appendChild(b);});
+  function show(i){var s=CXS[i];steps.querySelectorAll('button').forEach(function(b,k){b.classList.toggle('on',k===i);});
+    bar.querySelectorAll('span').forEach(function(sp){var v=s.v[sp.getAttribute('data-id')]||0;sp.style.flexBasis=v+'%';sp.style.borderRightWidth=v?'2px':'0';});
+    root.querySelector('#cx-say').textContent=s.say;root.querySelector('#cx-subs').style.opacity=s.subs?1:0;var tot=0;for(var k in s.v)tot+=s.v[k];var f=root.querySelector('#cx-fill');f.textContent='About '+tot+'% full';f.classList.toggle('hi',tot>80);leg.querySelectorAll('p').forEach(function(lp){lp.style.display=s.v[lp.getAttribute('data-id')]?'':'none';});}
+  show(0);
+}
+
+/* ===== 4. script or agent? ===== */
+var SORT=[
+ ['A table, column or measure name has an underscore','s','Exact: one character to look for. It\'s in check_names.py.'],
+ ['A measure has no /// description line above it','s','Exact: is the line there or not. It\'s in check_names.py.'],
+ ['qty should be called Quantity','e','Ambiguous, both work. A script with a list of abbreviations (qty → Quantity) checks it exactly; the agent handles the ones nobody listed.'],
+ ['ProductName should be Product Name','e','Ambiguous, both work. A script can flag a capital inside a word as an error, or add the space; the agent knows when a word shouldn\'t be split, like YoY or DAX.'],
+ ['A measure named "… %" has no percentage format','e','Ambiguous, both work. It\'s exact, so it could move into the script, a good next rule to add; until then the agent checks it.'],
+ ['Which display folder a measure belongs in','a','Depends on what the measure means. Judgement.'],
+ ['How to word a description for finance','a','Language and the glossary. Judgement.']
+];
+function exScripts(root){
+  root.innerHTML='<p class="hint">Ask the room for each rule: could a script check it exactly, or does it need the agent\'s judgement? Then reveal.</p><div class="sort" id="so"></div><p style="margin-top:1rem;display:flex;gap:.6rem"><button class="btn" type="button" id="so-r">Reveal</button><button class="btn" type="button" id="so-x">Reset</button></p>';
+  var so=root.querySelector('#so');
+  SORT.forEach(function(r,i){var c=h('div',{'class':'card','data-a':r[1]},'<div><p>'+esc(r[0])+'</p><small>'+esc(r[2])+'</small></div><div class="seg"><button type="button" data-v="s">Script</button><button type="button" data-v="a">Agent</button></div>');so.appendChild(c);});
+  so.addEventListener('click',function(e){var b=e.target.closest('.seg button');if(!b)return;b.parentNode.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);});});
+  root.querySelector('#so-r').onclick=function(){so.classList.add('revealed');so.querySelectorAll('.card').forEach(function(c){var a=c.getAttribute('data-a'),on=c.querySelector('.seg .on'),v=on?on.getAttribute('data-v'):null;c.classList.remove('right','wrong','either');c.classList.add(a==='e'?(v?'right':'either'):(v===a?'right':(v?'wrong':'either')));if(!v&&a!=='e'){c.classList.remove('either');c.classList.add('right');c.querySelector('[data-v="'+a+'"]').classList.add('on');}});};
+  root.querySelector('#so-x').onclick=function(){so.classList.remove('revealed');so.querySelectorAll('.card').forEach(function(c){c.classList.remove('right','wrong','either');c.querySelectorAll('.on').forEach(function(x){x.classList.remove('on');});});};
+}
+
+/* ===== 5. get past the hook ===== */
+function exHooks(root){
+  root.innerHTML='<div class="cols"><div><p class="lbl">Before the call · no_production.py</p>'+
+  '<p class="hint" style="margin-bottom:.5rem">This is the call the agent wants to send to the MCP server. Edit it. Can the room find a way past the hook?</p>'+
+  '<textarea id="hk-in" rows="3" spellcheck="false"></textarea><div class="chips" id="hk-chips"></div>'+
+  '<label class="toggle"><input type="checkbox" id="hk-fix"> Apply the fix: ignore capitals</label>'+
+  '<div class="out" id="hk-out"></div>'+
+  '<div class="hk-code" id="hk-code" style="margin-top:.7rem"></div></div>'+
+  '<div><p class="lbl">After the edit · check_names.py --hook</p><p class="hint" style="margin-bottom:.5rem">What the agent just wrote into Sales.tmdl. Edit it live: fix the name, or type a /// line above the measure.</p>'+
+  '<textarea id="nm-in" rows="5" spellcheck="false" wrap="off"></textarea><div class="chips" id="nm-chips"></div>'+
+  '<p style="margin:.2rem 0 .6rem"><button class="btn" type="button" id="nm-add">+ Add a description</button></p>'+
+  '<div class="out" id="nm-out"></div><p class="hint" style="margin-top:.7rem">The same check as check_names.py, run on just the edited text: an underscore in a name, or a measure with no /// line directly above it. Exit code 2 sends the message back to the agent.</p></div></div>';
+  var hin=root.querySelector('#hk-in'),fix=root.querySelector('#hk-fix');
+  var tries=['{"operation": "Connect", "model": "Sales [Prod]"}','{"operation": "Connect", "model": "Sales [Dev]"}','{"operation": "Connect", "model": "Sales [PROD]"}','{"operation": "Connect", "model": "Sales  [Prod]"}','{"operation": "Connect", "id": "3f2a…-prod-guid"}'];
+  var labels=['Sales [Prod]','Sales [Dev]','Sales [PROD]','two spaces','by ID'];
+  var hc=root.querySelector('#hk-chips');tries.forEach(function(v,i){var b=h('button',{'class':'chip',type:'button'},esc(labels[i]));b.onclick=function(){hin.value=v;runH();};hc.appendChild(b);});
+  function runH(){var s=hin.value,f=fix.checked,blocked=f?s.toLowerCase().indexOf('sales [prod]')>=0:s.indexOf('Sales [Prod]')>=0;var o=root.querySelector('#hk-out');
+    if(blocked){o.className='out stop';o.textContent='Blocked: Sales [Prod] is production. Work on Sales [Dev] or the PBIP files.\nexit 2 · the call never reaches Power BI';}
+    else{o.className='out go';o.textContent='exit 0 · the call goes through to the MCP server';
+      if(/prod/i.test(s))o.textContent+='\n\n⚠ It says prod, and it got through. A hook is only as good as its check.';}
+    root.querySelector('#hk-code').innerHTML='PRODUCTION = "Sales [Prod]"\ncall = json.load(sys.stdin)\nif PRODUCTION'+(f?'<span class="k">.lower()</span>':'')+' in json.dumps(call["tool_input"])'+(f?'<span class="k">.lower()</span>':'')+':\n    print("Blocked: …", file=sys.stderr)\n    sys.exit(2)';}
+  hin.addEventListener('input',runH);fix.addEventListener('change',runH);hin.value=tries[0];runH();
+  var nin=root.querySelector('#nm-in');
+  var DAX="CALCULATE(COUNTROWS(Sales), Sales[Is Return] = 1)";
+  function snippet(name){var q=/[^A-Za-z0-9_]/.test(name)?"'"+name+"'":name;return "\tmeasure "+q+" = "+DAX+"\n\t\tformatString: #,0\n\t\tdisplayFolder: Revenue";}
+  var nc=root.querySelector('#nm-chips');['total_returns','Total Returns','TotalReturns','Return_Rate %'].forEach(function(v){var b=h('button',{'class':'chip',type:'button'},esc(v));b.onclick=function(){nin.value=snippet(v);runN();};nc.appendChild(b);});
+  // the same logic as check_names.py: a table, column or measure line; underscore; a measure needs /// on the line above
+  var RX=/^\s*(table|column|measure)\s+('([^']+)'|[^\s=]+)/;
+  function problems(text){var lines=text.split('\n'),p=[];
+    lines.forEach(function(line,i){var m=RX.exec(line);if(!m)return;var kind=m[1],name=m[3]||m[2];
+      if(name.indexOf('_')>=0)p.push("Sales.tmdl: "+kind+" '"+name+"' has an underscore");
+      if(kind==='measure'&&!(i>0&&/^\s*\/\/\//.test(lines[i-1])))p.push("Sales.tmdl: "+kind+" '"+name+"' has no description");});
+    return p;}
+  function runN(){var o=root.querySelector('#nm-out'),text=nin.value;
+    if(!RX.test(text.split('\n').filter(function(l){return RX.test(l);})[0]||'')){o.className='out';o.textContent='No table, column or measure line to check.';return;}
+    var p=problems(text);
+    if(p.length){o.className='out stop';o.textContent=p.join('\n')+'\nexit 2 · shown to the agent, which fixes it';}
+    else{o.className='out go';o.textContent='exit 0 · nothing to report';
+      var m=/measure\s+('([^']+)'|[^\s=]+)/.exec(text),n=m?(m[2]||m[1]):'';
+      if(/^[A-Z][a-z]+[A-Z]/.test(n))o.textContent+='\n\nThe script passes it, but our standard wants spaces. That part is the agent\'s judgement.';}}
+  root.querySelector('#nm-add').onclick=function(){
+    var lines=nin.value.split('\n');
+    for(var i=0;i<lines.length;i++){var m=RX.exec(lines[i]);
+      if(m&&m[1]==='measure'&&!(i>0&&/^\s*\/\/\//.test(lines[i-1]))){var ind=/^\s*/.exec(lines[i])[0],name=m[3]||m[2];
+        lines.splice(i,0,ind+'/// Number of returned order lines.');nin.value=lines.join('\n');runN();return;}}
+    runN();};
+  nin.addEventListener('input',runN);
+  nin.addEventListener('keydown',function(e){if(e.key==='Tab'){e.preventDefault();var s=nin.selectionStart;nin.setRangeText('\t',s,nin.selectionEnd,'end');runN();}});
+  nin.value=snippet('total_returns');runN();
+}
+
+/* ===== 6. one after another, or in parallel? ===== */
+var RACE=[['Customer',5],['Product',8,1],['Date',4],['Sales',10]];
+function exSubs(root){
+  root.innerHTML='<p class="hint">Four tables to document. The times are illustrative; the shape is the point.</p>'+
+  '<div style="display:flex;gap:1rem;align-items:center"><div class="seg" id="rc-m"><button type="button" data-m="seq" class="on">One agent, one after another</button><button type="button" data-m="par">Four sub-agents, in parallel</button></div><button class="btn" type="button" id="rc-go">▶ Run</button><span class="clock" id="rc-clock" style="margin-left:auto">0:00</span></div>'+
+  '<div class="race" id="rc"></div><p class="lbl" style="margin-top:.8rem">The main conversation\'s context</p><div class="ctxmini" id="rc-ctx"></div><p class="hint" id="rc-note" style="margin-top:.4rem"></p>'+
+  '<div class="collide"><label class="toggle" style="margin:0"><input type="checkbox" id="rc-col"> Now rename in parallel too</label><div id="rc-cw" style="display:none"><div class="two"><div>Sub-agent A · Customer<br>relationships.tmdl: DimCustomer[cust_id] → <b>Customer[Customer Key]</b></div><div>Sub-agent B · Product<br>relationships.tmdl: DimProduct[prod_id] → <b>Product[Product Key]</b></div></div><div class="out stop">Both read relationships.tmdl before either wrote it. B saves last, and A\'s change is gone: the Customer relationship now points at a column that doesn\'t exist.</div></div></div>';
+  var mode='seq',rc=root.querySelector('#rc'),ctx=root.querySelector('#rc-ctx'),timerId=null;
+  RACE.forEach(function(r){rc.appendChild(h('div',{'class':'lane2'},'<span>'+r[0]+'</span><span class="track"><i'+(r[2]?' class="flag"':'')+'></i></span><span>'+r[1]+' min</span>'));ctx.appendChild(h('span'));});
+  root.querySelectorAll('#rc-m button').forEach(function(b){b.onclick=function(){mode=b.getAttribute('data-m');root.querySelectorAll('#rc-m button').forEach(function(x){x.classList.toggle('on',x===b);});reset();};});
+  root.querySelector('#rc-col').onchange=function(){root.querySelector('#rc-cw').style.display=this.checked?'block':'none';};
+  function reset(){if(timerId)cancelAnimationFrame(timerId);timerId=null;rc.querySelectorAll('.track i').forEach(function(i){i.style.width='0';i.style.left='0';});ctx.querySelectorAll('span').forEach(function(s){s.style.flexBasis='0%';});root.querySelector('#rc-clock').textContent='0:00';root.querySelector('#rc-note').textContent='';}
+  root.querySelector('#rc-go').onclick=function(){reset();var total=mode==='seq'?27:10,scale=2600/10,t0=performance.now();
+    var starts=[],acc=0;RACE.forEach(function(r){starts.push(mode==='seq'?acc:0);acc+=r[1];});
+    function step(now){var m=(now-t0)/scale;if(m>total)m=total;root.querySelector('#rc-clock').textContent=Math.floor(m)+':'+String(Math.floor((m%1)*60)).padStart(2,'0');
+      rc.querySelectorAll('.track i').forEach(function(i,k){var s=starts[k],d=RACE[k][1];var p=Math.max(0,Math.min(1,(m-s)/d));i.style.left=(mode==='seq'?s/total*100:0)+'%';i.style.width=(mode==='seq'?p*d/total*100:p*d/10*100)+'%';
+        var sp=ctx.children[k];sp.style.flexBasis=(mode==='seq'?p*22:(p>=1?3:0))+'%';});
+      if(m<total)timerId=requestAnimationFrame(step);else root.querySelector('#rc-note').textContent=mode==='seq'?'27 minutes, and the main conversation now holds all four tables.':'10 minutes: as long as the slowest table. The main conversation holds four short summaries; Product flagged BIK, ACC and CLO.';}
+    timerId=requestAnimationFrame(step);};
+}
+
+/* ===== 7. approve or reject ===== */
+var PROPS=[
+ ['Add to glossary.md: BIK = Bikes, ACC = Accessories, CLO = Clothing','references/glossary.md','+ | Category BIK / ACC / CLO | Bikes, Accessories, Clothing |'],
+ ['Add to dax-style.md: wrap every measure in CALCULATE','references/dax-style.md','+ - Wrap every measure in CALCULATE.'],
+ ['Add to decisions.md: Date is marked as the date table','references/decisions.md','+ 2026-11-07: Date is marked as the date table, so time intelligence uses Date[Date].'],
+ ['Change SKILL.md: abbreviations like qty are fine','SKILL.md','- No underscores, no abbreviations (Quantity, not qty).\n+ Abbreviations like qty are fine.']
+];
+function exLearn(root){
+  root.innerHTML='<p class="hint">After the task, the agent proposes these. You decide, as the skill says: nothing changes until you approve. Ask the room which ones to keep.</p>'+
+  '<div class="cols"><div class="props" id="pr"></div><div><p class="lbl">What changes in the skill</p><div class="out" id="pr-diff">Nothing yet.</div><p class="hint" id="pr-note" style="margin-top:.7rem"></p></div></div>';
+  var pr=root.querySelector('#pr');
+  PROPS.forEach(function(p,i){pr.appendChild(h('div',{'class':'prop','data-i':i},'<div><p>'+esc(p[0])+'</p><small>'+esc(p[1])+'</small></div><div class="acts"><button class="btn" type="button" data-a="ok">Approve</button><button class="btn" type="button" data-a="no">Reject</button></div>'));});
+  pr.addEventListener('click',function(e){var b=e.target.closest('button[data-a]');if(!b)return;var c=b.closest('.prop');c.classList.remove('ok','no');c.classList.add(b.getAttribute('data-a'));upd();});
+  function upd(){var lines=[],bad=0;pr.querySelectorAll('.prop').forEach(function(c){var i=+c.getAttribute('data-i');if(c.classList.contains('ok')){lines.push(PROPS[i][1]+'\n'+PROPS[i][2]);if(i===1||i===3)bad++;}});
+    root.querySelector('#pr-diff').textContent=lines.length?lines.join('\n\n'):'Nothing yet.';
+    root.querySelector('#pr-note').textContent=bad?'Careful: '+(bad>1?'two of these change':'one of these changes')+' the team\'s rules, not just facts. That\'s why a person approves.':'';}
+}
+
+/* ===== 8. build your own skill ===== */
+function exBuild(root){
+  root.innerHTML='<div class="bd"><div><p class="hint">Fill it in with the room, or for your own team. Copy the files when you\'re happy.</p>'+
+  '<label class="f" for="bd-n">Name</label><input type="text" id="bd-n" value="model-standards">'+
+  '<label class="f" for="bd-d">Description: what it does, then “Use when …” with the words people type</label><textarea id="bd-d" rows="5">Naming, description and DAX conventions for our Power BI semantic models. Use when creating, renaming, tidying, documenting or reviewing tables, columns or measures, or when writing or fixing DAX.</textarea><div class="meter" id="bd-m"></div>'+
+  '<div class="checks2"><label><input type="checkbox" id="bd-r" checked> References: a DAX style guide and a glossary</label><label><input type="checkbox" id="bd-s" checked> A check script, run before finishing</label><label><input type="checkbox" id="bd-h"> Hooks: block production, check after each edit</label><label><input type="checkbox" id="bd-a"> A sub-agent that uses the skill</label><label><input type="checkbox" id="bd-l" checked> The learning loop</label></div></div>'+
+  '<div><div class="tabs2" id="bd-t"></div><pre id="bd-o"></pre><p style="margin-top:.6rem"><button class="btn" type="button" id="bd-c">Copy this file</button></p></div></div>';
+  var cur='SKILL.md',files={};
+  function slug(s){return (s||'my-skill').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'my-skill';}
+  function gen(){var n=slug(root.querySelector('#bd-n').value),d=root.querySelector('#bd-d').value.trim().replace(/\s+/g,' '),R=root.querySelector('#bd-r').checked,S=root.querySelector('#bd-s').checked,H=root.querySelector('#bd-h').checked,A=root.querySelector('#bd-a').checked,L=root.querySelector('#bd-l').checked;
+    var wrap=d.replace(/(.{1,78})(\s|$)/g,'$1\n  ').trim();
+    var sk='---\nname: '+n+'\ndescription: '+wrap+'\n---\n# '+n.replace(/-/g,' ').replace(/^./,function(c){return c.toUpperCase();})+'\n\n## Names\n- Tables: singular business nouns, no prefixes (Customer, not DimCustomer).\n- Columns and measures: words with spaces, no underscores, no abbreviations.\n\n## Descriptions\n- Every visible column and measure gets a one-sentence /// description.\n';
+    if(R)sk+='\n## DAX\nFor style and patterns, read references/dax-style.md.\nFor business terms, read references/glossary.md.\n';
+    if(S)sk+='\n## Before you finish\nRun `python .claude/skills/'+n+'/scripts/check_names.py` and fix everything it reports.\n';
+    if(L)sk+='\n## After each task\nList conventions you met that aren\'t in this skill. Propose each as an addition\nto the right reference file. Don\'t change this skill until I approve.\n';
+    files={'SKILL.md':sk};
+    var tree='.claude/\n  skills/\n    '+n+'/\n      SKILL.md\n';if(R)tree+='      references/\n        dax-style.md\n        glossary.md\n';if(S)tree+='      scripts/\n        check_names.py\n';
+    if(H){tree+='  hooks/\n    no_production.py\n  settings.json\n';files['settings.json']='{\n  "hooks": {\n    "PreToolUse": [{ "matcher": "mcp__powerbi-modeling__.*",\n      "hooks": [{ "type": "command", "command": "python .claude/hooks/no_production.py" }] }]'+(S?',\n    "PostToolUse": [{ "matcher": "Edit|Write",\n      "hooks": [{ "type": "command", "command":\n        "python .claude/skills/'+n+'/scripts/check_names.py --hook" }] }]':'')+'\n  }\n}\n';}
+    if(A){tree+='  agents/\n    table-documenter.md\n';files['table-documenter.md']='---\nname: table-documenter\ndescription: Documents one table of a Power BI semantic model. Give it one table at a time.\ntools: Read, Edit, Grep, Glob\nskills: '+n+'\n---\nDocument one table. Edit only that table\'s TMDL file. Don\'t rename anything.\nReply in three lines: what you added, what was unclear, and names that break the standard.\n';}
+    files['folders']=tree;
+    var words=d.split(/\s+/).filter(Boolean).length,use=/use when/i.test(d),m=root.querySelector('#bd-m');
+    m.innerHTML=(use?'✓ Has “Use when”':'✕ Add “Use when …”')+' · '+words+' words'+(words<15?' · ✕ too short to match well':' · ✓ enough to match on');
+    m.style.color=(use&&words>=15)?'var(--go)':'var(--stop)';
+    var tb=root.querySelector('#bd-t');tb.innerHTML='';Object.keys(files).forEach(function(k){var b=h('button',{type:'button','class':k===cur?'on':''},esc(k));b.onclick=function(){cur=k;gen();};tb.appendChild(b);});
+    if(!files[cur])cur='SKILL.md';root.querySelector('#bd-o').textContent=files[cur];}
+  root.addEventListener('input',gen);root.addEventListener('change',gen);
+  root.querySelector('#bd-c').onclick=function(){copyText(files[cur],this);};gen();
+}
+
+var EXERCISES={
+ job:{t:'Before and after',ill:false,f:exJob},
+ found:{t:'Will the skill load?',ill:true,f:exFound},
+ pieces:{t:'What\'s in the context?',ill:true,f:exPieces},
+ scripts:{t:'Script or agent?',ill:false,f:exScripts},
+ hooks:{t:'Get past the hook',ill:false,f:exHooks},
+ subagents:{t:'One after another, or in parallel?',ill:true,f:exSubs},
+ learning:{t:'Approve or reject',ill:true,f:exLearn},
+ monday:{t:'Build your own skill',ill:false,f:exBuild}
+};
+function openEx(id){var e=EXERCISES[id];if(!e)return;closeOv();exTitle.textContent=e.t;exIll.style.display=e.ill?'':'none';exBody.innerHTML='';e.f(exBody);body.classList.add('ex-open');ex.setAttribute('data-id',id);}
+function closeEx(){body.classList.remove('ex-open');setTimeout(function(){if(!body.classList.contains('ex-open'))exBody.innerHTML='';},300);}
+function exForSlide(){var p=deck.panels[deck.cur()],b=p.querySelector('.ex-btn');return b?b.getAttribute('data-ex'):null;}
+document.getElementById('ex-close').onclick=closeEx;
+document.getElementById('ex-back').onclick=function(){closeEx();closeOv();};
+
+/* ===== overview ===== */
+var ov=document.getElementById('ov'),ovg=document.getElementById('ov-grid');
+function openOv(){ovg.innerHTML='';deck.panels.forEach(function(p,i){var t=p.querySelector('h1,h2'),e=p.querySelector('.eyebrow'),demo=p.querySelector('.run-h b');var a=h('a',{href:'#'+p.id,'class':i===deck.cur()?'cur':''},'<small>'+(i+1)+(e?' · '+esc(e.textContent):'')+'</small><b>'+esc(t?t.textContent.replace(/\.(?=\S)/g,'. '):p.id)+'</b>'+(demo?'<em>'+esc(demo.textContent)+'</em>':'')+(p.querySelector('.ex-btn')?'<em> · exercise</em>':''));ovg.appendChild(a);});body.classList.add('ov-open');}
+function closeOv(){body.classList.remove('ov-open');}
+ov.addEventListener('click',function(e){if(e.target.closest('a'))setTimeout(closeOv,0);});
+
+/* ===== keys: handled before the deck's own keys ===== */
+document.addEventListener('keydown',function(e){
+  var typing=e.target.closest&&e.target.closest('input,textarea,select');
+  if(body.classList.contains('ex-open')){
+    if(e.key==='Escape'){e.preventDefault();closeEx();}
+    else if(!typing&&(e.key==='ArrowRight'||e.key==='PageDown'||e.key==='ArrowLeft'||e.key==='PageUp')){e.preventDefault();closeEx();}
+    e.stopPropagation();return;}
+  if(body.classList.contains('ov-open')){if(e.key==='Escape'||e.key==='o'||e.key==='O'){closeOv();}e.stopPropagation();e.preventDefault();return;}
+  if(typing)return;
+  if(e.key==='e'||e.key==='E'){var id=exForSlide();if(id){e.preventDefault();e.stopPropagation();openEx(id);}}
+  else if(e.key==='o'||e.key==='O'){e.preventDefault();e.stopPropagation();openOv();}
+  else if(e.key==='t'||e.key==='T'){e.stopPropagation();timerOff=!timerOff;tick();}
+},true);
+document.addEventListener('click',function(e){
+  var b=e.target.closest('.ex-btn');if(b){openEx(b.getAttribute('data-ex'));return;}
+  var ca=e.target.closest('.copyall');if(ca){var ps=[].map.call(ca.closest('.run').querySelectorAll('.s-prompt code'),function(c){return c.textContent;});copyText(ps.join('\n\n'),ca);}
+});
+
+/* ===== demo timer ===== */
+var timer=document.getElementById('timer'),spent={},entered=null,curId=null,timerOff=false;
+function plan(p){var m=p.querySelector('.run-h small');var r=m&&/about (\d+) min/.exec(m.textContent);return r?+r[1]*60:null;}
+function fmt(s){s=Math.floor(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function tick(){var p=deck.panels[deck.cur()];var pl=plan(p);if(!pl||timerOff){timer.classList.remove('show');return;}
+  var s=(spent[p.id]||0)+(entered?(Date.now()-entered)/1000:0);timer.textContent=p.querySelector('.run-h b').textContent+' · '+fmt(s)+' of '+fmt(pl);timer.classList.add('show');timer.classList.toggle('over',s>pl);}
+window.onSlide=function(p){if(curId&&entered){spent[curId]=(spent[curId]||0)+(Date.now()-entered)/1000;}curId=p.id;entered=Date.now();if(body.classList.contains('ex-open'))closeEx();tick();};
+setInterval(tick,1000);
+if(window.deck)window.onSlide(deck.panels[deck.cur()]);
+var q=/[?&]ex=([a-z0-9]+)/.exec(location.search);if(q)openEx(q[1]);
+})();
+</script>
+
+<script>
+(function(){
+var FILES={"SKILL.md": "---\nname: model-standards\ndescription: Naming, display folder, description and DAX conventions for our Power BI\n  semantic models. Use when creating, renaming, tidying, documenting or reviewing tables,\n  columns or measures in a PBIP or TMDL project, when writing or fixing DAX measures, or\n  when preparing a model for Copilot or data agents.\n---\n# Model standards\n\nOur team's rules for semantic models. They apply to the TMDL files in\n`*.SemanticModel/definition/`, one file per table.\n\n## Names\n- Tables: singular business nouns, no prefixes (Customer, not DimCustomer; Sales, not FactSales).\n- Columns and measures: words with spaces, each word capitalised (Order Date, Total Sales).\n  No underscores, no abbreviations (Quantity, not qty).\n- Percentages end in \" %\" (Margin %).\n- Keys are named \"<Table> Key\" (Customer Key) and hidden.\n\n## Renaming in TMDL\n- Change the object's name. Keep `sourceColumn` as it is, and never change the Power Query source.\n- Update every reference in the same change: DAX in measures, `relationships.tmdl`,\n  `sortByColumn`, the `ref table` lines in `model.tmdl`, and the table file's own name.\n- Report visuals refer to fields by name. This project's report has no visuals; in other\n  projects, check the report definition as well.\n- Renames touch several files, so do them in one place, never in parallel.\n\n## Descriptions, folders and formats\n- Every visible column and every measure gets a one-sentence description in business words\n  from references/glossary.md, as a `///` line directly above it.\n- Measures go in display folders by topic: Revenue, Profitability, Indicators.\n- Every measure gets a format string: `#,0` for amounts, `0.0%` for percentages.\n\n## DAX\nFor style and patterns, read references/dax-style.md.\n\n## Decisions\nBefore deciding something the glossary doesn't cover, read references/decisions.md.\n\n## Before you finish\nRun `python .claude/skills/model-standards/scripts/check_names.py` and fix everything it reports.\n\n## After each task\nList conventions you met that aren't in this skill, and mistakes you corrected. Propose each\nas an addition to the right reference file, with one example. Add agreed decisions to\nreferences/decisions.md with the date and the reason. Don't change this skill until I approve.", "references/dax-style.md": "# DAX style\n\n- Use a variable (VAR) for any value used more than once. Name it with a clear noun in\n  PascalCase (CurrentSales), never the same as a table.\n- No nested IF. Use SWITCH(TRUE(), ...) with one condition per line.\n- Divide with DIVIDE, never with \"/\".\n- Refer to measures without a table name ([Total Sales]) and to columns always with one\n  (Sales[Sales Amount]).\n- Spaces after commas and around operators.\n- Time intelligence uses 'Date'[Date].\n\n## Example\n\nBefore:\n\n    IF([TotalSales]>50000,\"High\",IF([TotalSales]>20000,\"Medium\",\"Low\"))\n\nAfter:\n\n    VAR CurrentSales = [Total Sales]\n    RETURN\n        SWITCH(\n            TRUE(),\n            CurrentSales > 50000, \"High\",\n            CurrentSales > 20000, \"Medium\",\n            \"Low\"\n        )", "references/glossary.md": "# Glossary\n\nThe business words for what's in the model, and the words people use for them. Use the\nfirst column's word in names and descriptions.\n\n| Business term | Words people also use | In the model |\n|---|---|---|\n| Sales | revenue, turnover, invoiced | Total Sales: all invoiced lines, returns included |\n| Net Sales | net revenue, headline sales | Net Sales: excludes returned lines |\n| Cost | COGS, cost of goods | Total Cost |\n| Margin | gross margin, GM | Margin %: (sales minus cost) divided by sales |\n| Segment | customer type | Customer[Segment]: Enterprise, Mid-market, Small business |\n| Return | credit, credited line | A sales line with Is Return = 1 |", "references/decisions.md": "# Decisions\n\nDecisions about the model, newest first, each with its reason.\n\n- 2026-11-03: Net Sales excludes returned lines (Is Return = 1). Agreed with finance,\n  because their monthly report shows sales after returns.", "scripts/check_names.py": "\"\"\"Checks the semantic model's names against the model-standards rules.\n\n    python check_names.py [folder ...]   checks every TMDL file (default: every *.SemanticModel)\n    python check_names.py --hook         run by a hook: checks only the file just edited\n\"\"\"\nimport json\nimport pathlib\nimport re\nimport sys\n\n\ndef check(file):\n    problems = []\n    lines = file.read_text(encoding=\"utf-8\").splitlines()\n    for i, line in enumerate(lines):\n        m = re.match(r\"\\s*(table|column|measure)\\s+('([^']+)'|[^\\s=]+)\", line)\n        if not m:\n            continue\n        kind, name = m.group(1), m.group(3) or m.group(2)\n        if \"_\" in name:\n            problems.append(f\"{file.name}: {kind} '{name}' has an underscore\")\n        if kind == \"measure\" and not lines[i - 1].strip().startswith(\"///\"):\n            problems.append(f\"{file.name}: measure '{name}' has no description\")\n    return problems\n\n\nif \"--hook\" in sys.argv:\n    edited = json.load(sys.stdin).get(\"tool_input\", {}).get(\"file_path\", \"\")\n    if edited.endswith(\".tmdl\") and pathlib.Path(edited).exists():\n        problems = check(pathlib.Path(edited))\n        if problems:\n            print(\"\\n\".join(problems), file=sys.stderr)  # a hook shows this to the agent\n            sys.exit(2)\n    sys.exit(0)\n\nfolders = [pathlib.Path(a) for a in sys.argv[1:]] or list(pathlib.Path(\".\").glob(\"*.SemanticModel\"))\nproblems = [p for folder in folders for f in sorted(folder.rglob(\"*.tmdl\")) for p in check(f)]\nprint(\"\\n\".join(problems) or \"No problems found\")"}, NOTES={"SKILL.md": [["Always in context", "The name and description of every installed skill.", true], ["Loaded when used", "Everything below the header.", false]], "references/dax-style.md": [["Just a Markdown file", "No special format. Text the agent reads when SKILL.md tells it to.", true], ["Read only for DAX", "“For style and patterns, read references/dax-style.md.”", false]], "references/glossary.md": [["Just a Markdown file", "A plain table of business words. Anyone on the team can edit it.", true], ["Read when describing", "Descriptions use the first column's word.", false]], "references/decisions.md": [["Just a Markdown file", "A dated log, newest first, each with its reason.", true], ["Grows from the work", "The learning loop adds to it, after you approve.", false]], "scripts/check_names.py": [["Just code", "A normal Python script. Same input, same answer, every time.", true], ["Run, not read", "Only its output, a short list of problems, enters the context.", false]]};
+function esc(s){return s.replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+function paint(name,text){
+  var lines=text.split('\n');
+  if(name==='SKILL.md'){var end=lines.indexOf('---',1);
+    return '<span class="hl">'+esc(lines.slice(0,end+1).join('\n'))+'</span>\n'+lines.slice(end+1).map(function(l){return /^#/.test(l)?'<span class="h">'+esc(l)+'</span>':esc(l);}).join('\n');}
+  if(/\.py$/.test(name))return lines.map(function(l){var m=/^(\s*)(#.*)$/.exec(l);if(m)return esc(m[1])+'<span class="c">'+esc(m[2])+'</span>';
+    return esc(l).replace(/\b(import|def|for|in|if|not|and|return|print|from)\b/g,'<span class="k">$1</span>').replace(/(&quot;|")(.*?)\1/g,function(x){return x;});}).join('\n');
+  return lines.map(function(l){return /^#/.test(l)?'<span class="h">'+esc(l)+'</span>':esc(l);}).join('\n');
+}
+var sec=document.getElementById('skill');if(!sec)return;
+var fv=sec.querySelector('#fv'),fn=sec.querySelector('#fv-name');
+function show(name){
+  sec.querySelectorAll('button.f').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-file')===name);});
+  fn.textContent=name==='SKILL.md'?'SKILL.md':name;
+  fv.innerHTML=paint(name,FILES[name]);fv.scrollTop=0;
+  [['an1',0],['an2',1]].forEach(function(a){var n=NOTES[name][a[1]],el=sec.querySelector('#'+a[0]);el.innerHTML='<b>'+esc(n[0])+'</b><span>'+esc(n[1])+'</span>';el.classList.toggle('dim',!n[2]);});
+}
+sec.addEventListener('click',function(e){var b=e.target.closest('button.f');if(b)show(b.getAttribute('data-file'));});
+show('SKILL.md');
+})();
+</script>
+
+<script>
+(function(){
+var body=document.body,pop=null,styleText=[].map.call(document.querySelectorAll('style'),function(s){return s.textContent;}).join('\n');
+var POPCSS='html{font-size:16px}body{display:block!important;height:auto!important;min-height:100vh;overflow:auto!important;padding:1rem 1rem 1.2rem;background:#F8F8F8}'+
+ '.rv{opacity:1!important;transform:none!important}.run{display:grid!important;max-height:none}.steps{overflow:visible}'+
+ '.pp-h{display:flex;align-items:center;gap:.5rem;margin:.2rem 0 .8rem}.pp-h .t{flex:1;min-width:0}.pp-h small{display:block;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:#C514B4}'+
+ '.pp-h b{display:block;font-family:var(--f-head);font-weight:500;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+ '.pp-timer{font-family:var(--f-mono);font-size:.76rem;margin-bottom:.6rem;color:var(--muted)}.pp-timer.over{color:var(--stop)}'+
+ '.pp-next{font-size:.8rem;color:var(--muted);margin:0 0 .5rem}.pp-dim .run{opacity:.55}';
+function cur(){return deck.panels[deck.cur()];}
+function nextDemo(i){for(var k=i+1;k<deck.panels.length;k++){if(deck.panels[k].querySelector('.run'))return k;}return -1;}
+
+/* ---- in the deck: show or hide the panel ---- */
+function toggleRun(){body.classList.toggle('run-open');}
+
+/* ---- the pop-out window ---- */
+function openPop(){
+  pop=window.open('','demo-steps','width=560,height=980');
+  if(!pop){alert('The browser blocked the pop-up. Allow pop-ups for this file and press P again.');return;}
+  var d=pop.document;
+  d.open();
+  d.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Demo steps</title>'+
+    '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">'+
+    '<style>'+styleText+POPCSS+'</style></head><body data-theme="light"><div id="pp"></div></body></html>');
+  d.close();
+  d.addEventListener('click',onPopClick);
+  d.addEventListener('keydown',function(e){if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();deck.go(deck.cur()+1);}else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();deck.go(deck.cur()-1);}});
+  renderPop();
+}
+function popOpen(){return pop&&!pop.closed;}
+function renderPop(){
+  if(!popOpen())return;
+  var d=pop.document,pp=d.getElementById('pp');if(!pp)return;
+  var i=deck.cur(),p=deck.panels[i],h=p.querySelector('h1,h2'),run=p.querySelector('.run'),src=i,dim=false,note='';
+  if(!run){var k=nextDemo(i);if(k<0){pp.innerHTML=head(i,h)+'<p class="pp-next">No more demos.</p>';return;}
+    src=k;run=deck.panels[k].querySelector('.run');dim=true;note='<p class="pp-next">No demo on this slide. Coming up on slide '+(k+1)+':</p>';}
+  pp.className=dim?'pp-dim':'';
+  pp.innerHTML=head(i,h)+'<p class="pp-timer" id="pp-timer"></p>'+note+run.outerHTML;
+  pp.querySelector('.run').setAttribute('data-src',src);
+  tickPop();
+}
+function head(i,h){return '<div class="pp-h"><div class="t"><small>Slide '+(i+1)+' / '+deck.panels.length+'</small><b>'+(h?h.textContent:'')+'</b></div>'+
+  '<button class="btn" type="button" data-nav="-1">←</button><button class="btn" type="button" data-nav="1">→</button></div>';}
+function tickPop(){if(!popOpen())return;var e=pop.document.getElementById('pp-timer'),tm=document.getElementById('timer');if(!e)return;
+  var on=tm.classList.contains('show');e.textContent=on?tm.textContent:'';e.classList.toggle('over',tm.classList.contains('over'));}
+setInterval(tickPop,1000);
+function popCopy(text,btn){var d=pop.document,ok=function(){var o=btn.textContent;btn.textContent='Copied';btn.classList.add('ok');pop.setTimeout(function(){btn.textContent=o;btn.classList.remove('ok');},1500);};
+  var ta=d.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';d.body.appendChild(ta);ta.select();
+  var done=false;try{done=d.execCommand('copy');}catch(e){}d.body.removeChild(ta);
+  if(!done&&pop.navigator.clipboard){pop.navigator.clipboard.writeText(text).then(ok,ok);}else ok();}
+function onPopClick(e){
+  var nav=e.target.closest('[data-nav]');if(nav){deck.go(deck.cur()+(+nav.getAttribute('data-nav')));return;}
+  var run=e.target.closest('.run');if(!run)return;
+  var src=deck.panels[+run.getAttribute('data-src')].querySelector('.run');
+  var no=e.target.closest('.step .no');
+  if(no){var li=no.parentNode,idx=[].indexOf.call(li.parentNode.children,li);li.classList.toggle('done');
+    src.querySelectorAll('.step')[idx].classList.toggle('done',li.classList.contains('done'));
+    var nx=li.nextElementSibling;if(li.classList.contains('done')&&nx)nx.scrollIntoView({block:'nearest',behavior:'smooth'});return;}
+  var c=e.target.closest('.copy');if(c){popCopy(c.parentNode.querySelector('code').textContent,c);return;}
+  var ca=e.target.closest('.copyall');if(ca){popCopy([].map.call(run.querySelectorAll('.s-prompt code'),function(x){return x.textContent;}).join('\n\n'),ca);}
+}
+
+/* ---- keep the pop-out in step, and mirror ticks made in the deck ---- */
+var prev=window.onSlide;window.onSlide=function(p){if(prev)prev(p);renderPop();};
+document.addEventListener('click',function(e){
+  if(e.target.closest('.demo-btn')){toggleRun();return;}
+  if(e.target.closest('.pop-btn')){openPop();return;}
+  if(e.target.closest('.step .no'))setTimeout(renderPop,0);
+});
+document.addEventListener('keydown',function(e){
+  if(body.classList.contains('ex-open')||body.classList.contains('ov-open'))return;
+  if(e.target.closest&&e.target.closest('input,textarea,select'))return;
+  if(e.key==='d'||e.key==='D'){e.preventDefault();e.stopPropagation();toggleRun();}
+  else if(e.key==='p'||e.key==='P'){e.preventDefault();e.stopPropagation();openPop();}
+},true);
+window.addEventListener('beforeunload',function(){if(popOpen())pop.close();});
+})();
+</script>
+</body>
+</html>

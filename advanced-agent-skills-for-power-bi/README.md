@@ -1,6 +1,7 @@
 # Advanced Agent Skills for Power BI
 
-**Slides:** https://mathiashalkjaer.github.io/Presentations/advanced-agent-skills-for-power-bi/
+**Session page:** https://mathiashalkjaer.github.io/Presentations/advanced-agent-skills-for-power-bi/
+**Slides:** https://mathiashalkjaer.github.io/Presentations/advanced-agent-skills-for-power-bi/slides/
 **Field guide:** [web](https://mathiashalkjaer.github.io/Presentations/advanced-agent-skills-for-power-bi/guide/) · [PDF](guide/advanced-agent-skills-field-guide.pdf)
 **Demo project:** https://github.com/MathiasHalkjaer/agent-skills-pbi-demo
 

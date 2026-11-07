@@ -7,7 +7,7 @@ Speaker profile: https://sessionize.com/halkjaer/
 
 | Session | Material |
 |---|---|
-| [Advanced Agent Skills for Power BI](advanced-agent-skills-for-power-bi/) | [Slides](https://mathiashalkjaer.github.io/Presentations/advanced-agent-skills-for-power-bi/) · [Field guide](https://mathiashalkjaer.github.io/Presentations/advanced-agent-skills-for-power-bi/guide/) · [Demo project](https://github.com/MathiasHalkjaer/agent-skills-pbi-demo) |
+| [Advanced Agent Skills for Power BI](advanced-agent-skills-for-power-bi/) | [Session page](https://mathiashalkjaer.github.io/Presentations/advanced-agent-skills-for-power-bi/) · [Slides](https://mathiashalkjaer.github.io/Presentations/advanced-agent-skills-for-power-bi/slides/) · [Field guide](https://mathiashalkjaer.github.io/Presentations/advanced-agent-skills-for-power-bi/guide/) · [Demo project](https://github.com/MathiasHalkjaer/agent-skills-pbi-demo) |
 
 Each session has its own folder, and `main` holds its latest version. Every time a session
 is given, the version shown there gets a tag, such as `2026-11-07-bergamo`.
