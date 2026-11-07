@@ -1,0 +1,903 @@
+<title>Advanced Agent Skills</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Advanced Agent Skills for Power BI, a field guide. Styles follow "Testing a Data Agent".
+   Layout: a field guide in three chapters of short numbered sections. Section list at the side (top on phones).
+   Chapter 1 builds a mental model piece by piece; chapter 2 is task pages in one fixed shape; chapter 3 is look-up.
+   Figures are drawn from the same tokens as the text, so they follow the theme. */
+:root {
+  --bg: #ffffff;
+  --ink: #252424;
+  --muted: #5a5757;
+  --rule: #e2e2e2;
+  --panel: #f6f5f5;
+  --mark: #c514b4;
+  --ok: #2b7a4b;
+  --bad: #b3261e;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151414; --ink: #ecebeb; --muted: #aaa6a6; --rule: #2f2d2d; --panel: #1e1c1c;
+    --mark: #e27bd8; --ok: #6cc08f; --bad: #f08a80; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151414; --ink: #ecebeb; --muted: #aaa6a6; --rule: #2f2d2d; --panel: #1e1c1c;
+  --mark: #e27bd8; --ok: #6cc08f; --bad: #f08a80; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16.5px; line-height: 1.65;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.book { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 56px; max-width: 1100px; margin: 0 auto; padding-block: 48px 96px; }
+
+/* section list */
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; font-size: 13.5px; }
+nav.toc .part { font-weight: 600; color: var(--ink); margin: 18px 0 4px; font-size: 13.5px; }
+nav.toc .part:first-child { margin-top: 0; }
+nav.toc .part span { color: var(--mark); margin-right: 6px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+nav.toc a { display: grid; grid-template-columns: 30px 1fr; color: var(--muted); text-decoration: none; padding: 2px 0; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--ink); }
+nav.toc a span { font-variant-numeric: tabular-nums; }
+
+main { min-width: 0; max-width: 700px; }
+
+/* cover */
+.cover { padding-bottom: 32px; }
+.cover .bar { width: 120px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, #f05027, #c514b4); margin-bottom: 28px; }
+.cover h1 { font-weight: 300; font-size: clamp(36px, 6vw, 54px); line-height: 1.06; margin: 0 0 12px; letter-spacing: -0.02em; text-wrap: balance; }
+.cover .sub { font-size: 20px; color: var(--muted); margin: 0 0 18px; font-weight: 300; text-wrap: balance; }
+.cover .meta { font-size: 13px; color: var(--muted); margin: 0; }
+
+/* where to start */
+.routes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; border-top: 1px solid var(--rule); margin: 0 0 48px; }
+.routes a { display: block; padding: 14px 0; border-bottom: 1px solid var(--rule); color: var(--ink); text-decoration: none; min-width: 0; }
+.routes a b { display: block; font-weight: 500; }
+.routes a span { color: var(--muted); font-size: 14px; }
+.routes a:hover b, .routes a:focus-visible b { color: var(--mark); }
+
+/* chapter openers and sections */
+.partopen { padding-block: 28px 12px; margin-bottom: 30px; border-top: 1px solid var(--ink); }
+.partopen .k { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--mark); font-weight: 500; }
+.partopen h2 { font-weight: 300; font-size: 38px; margin: 4px 0 10px; letter-spacing: -0.015em; }
+.partopen p { color: var(--muted); margin: 0 0 16px; max-width: 560px; }
+.partopen ol { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(5, auto); grid-auto-flow: column; gap: 2px 24px; font-size: 14.5px; }
+.partopen ol li { margin: 0; display: grid; grid-template-columns: 34px 1fr; }
+.partopen ol li span { color: var(--muted); font-variant-numeric: tabular-nums; }
+section.ch { padding-block: 4px 30px; margin-bottom: 34px; border-bottom: 1px solid var(--rule); scroll-margin-top: 24px; }
+.ch .num { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+h3 { font-weight: 400; font-size: 27px; line-height: 1.2; margin: 4px 0 14px; letter-spacing: -0.01em; text-wrap: balance; }
+h4 { font-weight: 600; font-size: 16.5px; margin: 26px 0 6px; text-wrap: balance; }
+.lead { font-size: 18.5px; line-height: 1.55; margin: 0 0 18px; }
+p { margin: 0 0 14px; }
+ul, ol { margin: 0 0 16px; padding-left: 22px; }
+li { margin-bottom: 5px; }
+strong { font-weight: 600; }
+a { color: var(--mark); }
+code, pre { font-variant-ligatures: none; }
+code { font-family: var(--font-mono); font-size: 0.84em; background: var(--panel); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+pre { font-family: var(--font-mono); font-size: 13px; line-height: 1.55; background: var(--panel); border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; }
+pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+pre .c { color: var(--muted); }
+
+/* the idea so far: pieces you have (grey), the new one (dark), the ones to come (dashed) */
+.bricks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 18px; }
+.bricks::before { content: "The idea so far"; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-right: 4px; }
+.bricks span { font-size: 12px; padding: 3px 9px; border-radius: 3px; border: 1px dashed var(--muted); color: var(--muted); }
+.bricks span.have { background: var(--panel); border: 1px solid var(--panel); color: var(--ink); }
+.bricks span.now { background: var(--ink); border: 1px solid var(--ink); color: var(--bg); font-weight: 500; }
+
+/* tables */
+.table { overflow-x: auto; margin: 4px 0 20px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); }
+th { font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+td.nw { white-space: nowrap; }
+.yes { color: var(--ok); font-weight: 600; }
+.no { color: var(--bad); font-weight: 600; }
+
+/* asides */
+.why { border-left: 2px solid var(--mark); padding: 1px 0 1px 16px; margin: 0 0 18px; }
+.why .t, .like .t { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); display: block; margin-bottom: 2px; }
+.like { background: var(--panel); border-radius: 6px; padding: 13px 18px; margin: 0 0 18px; }
+.like p:last-child, .why p:last-child { margin-bottom: 0; }
+.why.warn { border-left-color: var(--bad); }
+.why.warn .t { color: var(--bad); }
+
+/* figures: drawn in the page's tokens */
+figure { margin: 6px 0 22px; }
+figure .draw { overflow-x: auto; }
+figure svg { display: block; width: 100%; height: auto; max-width: 100%; }
+figcaption { font-size: 13.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+.d-box { fill: var(--bg); stroke: var(--muted); stroke-width: 1; }
+.d-panel { fill: var(--panel); stroke: none; }
+.d-under { fill: var(--bg); stroke: var(--mark); stroke-width: 1.6; }
+.d-line { stroke: var(--muted); stroke-width: 1.2; fill: none; }
+.d-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.d-mk { stroke: var(--mark); stroke-width: 1.6; fill: none; }
+.d-head { fill: var(--muted); }
+.d-t { fill: var(--ink); font-family: var(--font-body); font-size: 13px; }
+.d-tb { fill: var(--ink); font-family: var(--font-body); font-size: 13px; font-weight: 600; }
+.d-tm { fill: var(--muted); font-family: var(--font-body); font-size: 12px; }
+.d-tk { fill: var(--mark); font-family: var(--font-body); font-size: 12px; font-weight: 600; }
+.d-ok { fill: var(--ok); }
+.d-badc { fill: var(--bg); stroke: var(--bad); stroke-width: 2.5; }
+.d-bar { fill: var(--ink); }
+.d-bar2 { fill: var(--muted); opacity: 0.4; }
+.d-axis { stroke: var(--rule); stroke-width: 1; }
+.d-axis2 { stroke: var(--muted); stroke-width: 1; }
+
+/* a case, drawn as a card */
+.casecard { border: 1px solid var(--ink); border-radius: 6px; margin: 6px 0 8px; overflow: hidden; }
+.casecard .row { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 14px; padding: 10px 16px; border-top: 1px solid var(--rule); font-size: 14.5px; }
+.casecard .row:first-child { border-top: none; }
+.casecard .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding-top: 3px; font-weight: 500; }
+.casecard .row > :last-child { min-width: 0; }
+.casecard code { background: none; padding: 0; font-size: 12.5px; }
+.casecard .off { background: var(--panel); color: var(--muted); }
+
+/* a reply with its numbers read out */
+.reply { border: 1px solid var(--rule); border-radius: 6px; padding: 12px 16px; margin: 6px 0 0; font-size: 15px; }
+.reply .who { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 2px; font-weight: 500; }
+.reply p { margin: 0; }
+.reply mark, .reads .rd { background: none; color: inherit; text-decoration: underline 2px var(--mark); text-underline-offset: 4px; font-weight: 600; }
+.reads { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 0 14px; font-size: 14px; margin: 0; padding: 6px 16px 0; }
+.reads > div { padding: 6px 0; border-bottom: 1px solid var(--rule); min-width: 0; }
+.reads .h { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+
+/* what checks look at */
+.groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 6px 0 8px; }
+.groups > div { border-top: 2px solid var(--ink); padding-top: 8px; min-width: 0; }
+.groups h5 { margin: 0; font-size: 14px; font-weight: 600; }
+.groups .s { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+.groups ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 7px; }
+.groups li { margin: 0; font-size: 14px; line-height: 1.3; }
+.groups li code { display: block; font-size: 11.5px; background: none; padding: 0; color: var(--muted); }
+.groups li.ex { border: 1px dashed var(--muted); border-radius: 4px; padding: 4px 6px; color: var(--muted); }
+
+/* a pipeline of steps */
+.pipe { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; margin: 6px 0 8px; counter-reset: p; }
+.pipe > div { position: relative; border: 1px solid var(--rule); border-radius: 6px; padding: 10px 10px 12px; min-width: 0; counter-increment: p; font-size: 13px; line-height: 1.4; }
+.pipe > div::before { content: counter(p); display: block; color: var(--mark); font-weight: 600; font-size: 12px; }
+.pipe > div + div::after { content: ""; position: absolute; left: -17px; top: 50%; border: 7px solid transparent; border-left-color: var(--muted); transform: translateY(-50%); }
+.pipe code { background: none; padding: 0; font-size: 11.5px; color: var(--muted); display: block; margin: 2px 0 4px; }
+.pipe b { display: block; font-size: 14px; margin-bottom: 3px; }
+.pipe .you { border-color: var(--mark); }
+.pipe .you b { color: var(--mark); }
+
+/* annotated lines: code on the left, what it means on the right */
+.annot { display: grid; grid-template-columns: minmax(0, 1fr) 170px; margin: 6px 0 18px; }
+.annot .l { font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; background: var(--panel); padding: 2px 14px; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+.annot .l:first-child { padding-top: 10px; border-radius: 6px 0 0 0; }
+.annot .l.last { padding-bottom: 10px; border-radius: 0 0 0 6px; }
+.annot .n { font-size: 12.5px; color: var(--mark); font-weight: 500; padding: 2px 0 2px 12px; align-self: center; line-height: 1.3; }
+.annot .n:not(:empty)::before { content: "← "; }
+
+/* decision ladder */
+.ladder { list-style: none; padding: 0; margin: 6px 0 18px; display: grid; gap: 0; }
+.ladder > li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 0 18px; margin: 0; position: relative; padding-bottom: 22px; }
+.ladder > li:last-child { padding-bottom: 0; }
+.ladder > li::after { content: "no"; position: absolute; left: 14px; bottom: 3px; font-size: 11px; color: var(--muted); }
+.ladder > li:not(:last-child)::before { content: ""; position: absolute; left: 6px; bottom: 0; height: 22px; border-left: 1px solid var(--muted); }
+.ladder > li:last-child::after { content: none; }
+.ladder .q { border: 1px solid var(--ink); border-radius: 5px; padding: 8px 12px; font-size: 14.5px; font-weight: 500; min-width: 0; align-self: start; }
+.ladder .a { padding: 8px 0; font-size: 14.5px; min-width: 0; }
+.ladder .a b { color: var(--mark); font-weight: 600; }
+.ladder .q + .a::before { content: "yes → "; color: var(--muted); font-size: 12px; }
+.ladder .a + .a { grid-column: 2; padding-top: 0; }
+
+/* task pages: label column, content column, a hairline between rows */
+.task { display: grid; grid-template-columns: 130px minmax(0, 1fr); column-gap: 20px; margin: 0 0 6px; }
+.task > dt, .task > dd { border-top: 1px solid var(--rule); padding-block: 12px; margin: 0; }
+.task > dt { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 500; padding-top: 16px; }
+.task > dt:first-of-type, .task > dt:first-of-type + dd { border-top: none; padding-top: 0; }
+.task > dt:first-of-type { padding-top: 4px; }
+.task > dd { min-width: 0; }
+.task > dd > :last-child { margin-bottom: 0; }
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 0 0 14px; display: grid; gap: 12px; }
+.steps > li { counter-increment: s; display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 6px; margin: 0; }
+.steps > li::before { content: counter(s); font-variant-numeric: tabular-nums; color: var(--mark); font-weight: 600; }
+.steps > li > div { min-width: 0; }
+.steps pre { margin: 8px 0; }
+
+/* card and glossary */
+.card { border: 1px solid var(--ink); border-radius: 6px; padding: 18px 20px 4px; margin: 0 0 18px; }
+.card h4 { margin-top: 0; }
+dl.gloss { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-weight: 600; }
+dl.gloss dd { margin: 0; min-width: 0; }
+
+.loopback { font-size: 13px; color: var(--mark); margin: 6px 0 0; text-align: right; }
+td.yes::before { content: "\2713  "; }
+td.no::before { content: "\2715  "; }
+a:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+@media (max-width: 860px) {
+  .book { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-block: 28px 64px; }
+  nav.toc { position: static; max-height: none; border-bottom: 1px solid var(--rule); padding-bottom: 18px; }
+}
+@media (max-width: 620px) {
+  .routes, .groups { grid-template-columns: minmax(0, 1fr); }
+  .partopen ol { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; }
+  .pipe { grid-template-columns: minmax(0, 1fr); }
+  .pipe > div + div::after { left: 22px; top: -12px; transform: none; border-left-color: transparent; border-top-color: var(--muted); }
+  .task { grid-template-columns: minmax(0, 1fr); }
+  .task > dd { border-top: none; padding-top: 2px; }
+  .casecard .row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .annot { grid-template-columns: minmax(0, 1fr); }
+  .annot .n { padding: 0 14px 6px; background: var(--panel); }
+  .ladder > li { grid-template-columns: minmax(0, 1fr); }
+  .ladder .a + .a { grid-column: 1; }
+  .reads { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .reads > div:nth-child(3n) { grid-column: 1 / -1; }
+  dl.gloss { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  dl.gloss dd { margin-bottom: 10px; }
+  figure svg { min-width: 560px; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="book">
+<nav class="toc" aria-label="Contents">
+  <div class="part"><span>1</span>How it works</div>
+  <ol>
+    <li><a href="#problem"><span>1.1</span>The problem</a></li>
+    <li><a href="#skill"><span>1.2</span>A skill</a></li>
+    <li><a href="#loading"><span>1.3</span>How a skill is found</a></li>
+    <li><a href="#references"><span>1.4</span>Reference files</a></li>
+    <li><a href="#scripts"><span>1.5</span>Scripts</a></li>
+    <li><a href="#hooks"><span>1.6</span>Hooks</a></li>
+    <li><a href="#subagents"><span>1.7</span>Sub-agents</a></li>
+    <li><a href="#learning"><span>1.8</span>A skill that learns</a></li>
+    <li><a href="#picture"><span>1.9</span>The whole picture</a></li>
+  </ol>
+  <div class="part"><span>2</span>Doing it</div>
+  <ol>
+    <li><a href="#setup"><span>2.1</span>Set up once</a></li>
+    <li><a href="#write"><span>2.2</span>Write your first skill</a></li>
+    <li><a href="#trigger"><span>2.3</span>Check that it's used</a></li>
+    <li><a href="#addscript"><span>2.4</span>Add a check script</a></li>
+    <li><a href="#addhook"><span>2.5</span>Add a guardrail</a></li>
+    <li><a href="#aiready"><span>2.6</span>Get a model ready for AI</a></li>
+    <li><a href="#learn"><span>2.7</span>Let the skill learn</a></li>
+  </ol>
+  <div class="part"><span>3</span>Look it up</div>
+  <ol>
+    <li><a href="#card"><span>3.1</span>The one-page card</a></li>
+    <li><a href="#where"><span>3.2</span>What works where</a></li>
+    <li><a href="#safety"><span>3.3</span>Before you rely on it</a></li>
+    <li><a href="#words"><span>3.4</span>Words</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="cover">
+  <div class="bar" aria-hidden="true"></div>
+  <h1>Advanced Agent Skills for Power BI</h1>
+  <p class="sub">A field guide to teaching a coding agent how your team builds semantic models, and keeping it to that.</p>
+  <p class="meta">For Power BI developers who already use a coding agent with a Power BI MCP server, or are about to. Companion to the session at the Data &amp; AI Builders Conference, Bergamo, 7 November 2026. Mathias Halkjær.</p>
+</header>
+
+<div class="routes" aria-label="Where to start">
+  <a href="#problem"><b>New to skills?</b><span>Read chapter 1, about 15 minutes. It builds the idea one piece at a time.</span></a>
+  <a href="#setup"><b>Ready to build one?</b><span>Chapter 2, starting with "Set up once".</span></a>
+  <a href="#trigger"><b>Skill not being used?</b><span>Go to 2.3, "Check that it's used".</span></a>
+  <a href="#card"><b>Need a template?</b><span>The one-page card, 3.1.</span></a>
+</div>
+
+<!-- ================= CHAPTER 1 ================= -->
+<div class="partopen">
+  <div class="k">Chapter 1</div>
+  <h2>How it works</h2>
+  <p>The idea, built one piece at a time. Sections 1.2 to 1.8 each add one of seven pieces, shown in a strip at the top of each section: pieces you have are grey, the new one is dark, the ones to come are dashed. In the figures, an outline in the accent colour marks the piece the section is about. 1.9 puts the pieces together.</p>
+  <ol>
+    <li><span>1.1</span>The problem</li><li><span>1.2</span>A skill</li><li><span>1.3</span>How a skill is found</li><li><span>1.4</span>Reference files</li><li><span>1.5</span>Scripts</li>
+    <li><span>1.6</span>Hooks</li><li><span>1.7</span>Sub-agents</li><li><span>1.8</span>A skill that learns</li><li><span>1.9</span>The whole picture</li>
+  </ol>
+</div>
+
+<section class="ch" id="problem">
+  <div class="sh"><div class="num">1.1</div>
+  <h3>The problem</h3>
+  <p class="lead">A coding agent connected to your semantic model can rename fifty columns in a minute. Left to itself, it renames them its own way.</p></div>
+  <p>The agent in this guide is a <strong>coding agent</strong>: an AI assistant that can read files, run commands and call tools. You chat with it in an <strong>agent harness</strong>, or <strong>harness</strong> for short: the app that runs the model, reads the skills and calls the tools, such as Claude Code, GitHub Copilot in VS Code or Cursor. The examples use Claude Code, which runs in a terminal or inside VS Code. Connected to a <strong>Power BI MCP server</strong>, the agent can read and change a semantic model and run DAX queries against it.</p>
+  <figure>
+    <div class="draw">
+    <svg viewBox="0 0 680 210" role="img" aria-label="You send a request to the coding agent. The agent makes tool calls to the Power BI MCP server, which reads and changes the semantic model. Below the agent, the skills folder holds your team's standards, which the agent reads when needed.">
+      <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="d-head"/></marker></defs>
+      <rect x="10" y="40" width="90" height="56" rx="6" class="d-box"/>
+      <text x="55" y="73" text-anchor="middle" class="d-tb">You</text>
+      <rect x="160" y="40" width="140" height="56" rx="6" class="d-box"/>
+      <text x="230" y="66" text-anchor="middle" class="d-tb">Coding agent</text>
+      <text x="230" y="83" text-anchor="middle" class="d-tm">an AI model</text>
+      <rect x="360" y="40" width="130" height="56" rx="6" class="d-box"/>
+      <text x="425" y="66" text-anchor="middle" class="d-tb">Power BI</text>
+      <text x="425" y="83" text-anchor="middle" class="d-tb">MCP server</text>
+      <rect x="572" y="40" width="98" height="56" rx="6" class="d-box"/>
+      <text x="621" y="66" text-anchor="middle" class="d-tb">Semantic</text>
+      <text x="621" y="83" text-anchor="middle" class="d-tb">model</text>
+      <line x1="100" y1="68" x2="158" y2="68" class="d-line" marker-end="url(#a1)"/>
+      <text x="129" y="60" text-anchor="middle" class="d-tm">request</text>
+      <line x1="300" y1="68" x2="358" y2="68" class="d-line" marker-end="url(#a1)"/>
+      <text x="329" y="60" text-anchor="middle" class="d-tm">tool calls</text>
+      <line x1="490" y1="68" x2="570" y2="68" class="d-line" marker-end="url(#a1)"/>
+      <text x="531" y="47" text-anchor="middle" class="d-tm">reads,</text>
+      <text x="531" y="60" text-anchor="middle" class="d-tm">changes</text>
+      <rect x="160" y="146" width="140" height="52" rx="6" class="d-under"/>
+      <text x="230" y="169" text-anchor="middle" class="d-tb">Skills</text>
+      <text x="230" y="186" text-anchor="middle" class="d-tm">your team's standards</text>
+      <line x1="230" y1="144" x2="230" y2="98" class="d-line" marker-end="url(#a1)"/>
+      <text x="240" y="126" class="d-tm">read when needed</text>
+    </svg>
+    </div>
+    <figcaption>How a request travels. The agent knows Power BI in general; the skills below it are where your team's own way of working comes in.</figcaption>
+  </figure>
+  <p>The agent knows DAX and Power BI well. What it doesn't know is your naming standard, your DAX style, which workspace is production, or that the finance team says "net sales" and never "revenue". And every new conversation starts from zero, so whatever you explained yesterday is gone today.</p>
+  <div class="like"><span class="t">Think of it like</span><p>A skilled consultant on their first day. They know Power BI, but not how your team does things. You give them the team handbook, and they look up the right page when they need it. A skill is a page of that handbook, written for the agent.</p></div>
+  <div class="like"><span class="t">Words you'll meet</span>
+    <p><strong>MCP server</strong>: a small program that gives the agent tools, here tools for a semantic model. MCP (Model Context Protocol) is the open standard most coding agents use to connect to tools.</p>
+    <p><strong>PBIP and TMDL</strong>: saving a Power BI project as PBIP turns the semantic model into text files in the TMDL format, one file per table. The agent can read and change them like any other files, and git can track every change.</p>
+    <p><strong>Working memory</strong>: everything the agent has read in the current conversation. It's limited, and everything in it competes for the agent's attention. Technically it's called the context window.</p></div>
+  <div class="why"><span class="t">Two ways to the model</span><p>The agent can reach a semantic model in two ways: through the MCP server, which works on a model open in Power BI Desktop or published to a workspace, and through the TMDL files of a PBIP project, which it edits like any other text files. This guide makes the changes in the TMDL files, where git shows every one of them, and uses the MCP server to look things up and run DAX queries. Power BI Desktop, and an MCP server connected to it, see changes to the files when you reopen the project.</p><p>The files are your working copy. Production is the model published in a workspace, and the agent can only reach it through the MCP server. That's where the guardrail in 1.6 sits.</p></div>
+  <p>The running example throughout is the <strong>Sales model</strong>, which the team wants ready for AI: Copilot and Fabric data agents answer better when tables, columns and measures have clear names, descriptions and display folders. It's real work, it's repetitive, and it has to follow the standard everywhere, which makes it a good job for an agent with the right skill.</p>
+</section>
+
+<section class="ch" id="skill">
+  <div class="sh"><div class="num">1.2</div>
+  <div class="bricks" aria-label="The idea so far: piece 1 of 7"><span class="now">Skill</span><span>Description</span><span>References</span><span>Scripts</span><span>Hooks</span><span>Sub-agents</span><span>Learning</span></div>
+  <h3>A skill is a folder with one required file</h3>
+  <p class="lead">A <strong>skill</strong> is a folder with a file called SKILL.md in it. The file holds a name, a description of when to use the skill, and instructions in plain text.</p></div>
+  <figure>
+    <div class="annot" role="group" aria-label="A SKILL.md file, with notes on what each part does">
+      <div class="l">---</div><div class="n"></div>
+      <div class="l"><b>name: model-standards</b></div><div class="n">the skill's name</div>
+      <div class="l"><b>description: Naming, display folder and DAX
+  conventions for our semantic models. Use when
+  creating, renaming or documenting tables,
+  columns or measures, or when writing DAX.</b></div><div class="n">when to use it (1.3)</div>
+      <div class="l">---</div><div class="n"></div>
+      <div class="l"># Model standards
+
+## Names
+- Tables: singular business nouns, no prefixes
+  (Customer, not DimCustomer).
+- Columns and measures: words with spaces,
+  first letter capital (Order Date).</div><div class="n">plain instructions</div>
+      <div class="l">## DAX
+For style and patterns, read
+references/dax-style.md.</div><div class="n">a reference file (1.4)</div>
+      <div class="l last">## Before you finish
+Run scripts/check_names.py and fix
+what it reports.</div><div class="n">a script (1.5)</div>
+    </div>
+    <figcaption>The SKILL.md of model-standards, shortened. The part between the two "---" lines is the header; the rest is instructions, written the way you'd brief a colleague.</figcaption>
+  </figure>
+  <p>The folder is named after the skill and can hold more than SKILL.md. Sections 1.4 and 1.5 cover the other two parts:</p>
+<pre><code>.claude/skills/model-standards/
+  SKILL.md          <span class="c">required: header and instructions</span>
+  references/       <span class="c">longer material, read when needed (1.4)</span>
+  scripts/          <span class="c">small programs for exact checks (1.5)</span></code></pre>
+  <p>Agent Skills is an open standard that several harnesses support, so the same folder works in more than one of them. Where you put it differs per tool. The examples in this guide use Claude Code's locations: <code>.claude/skills/</code> in the project for skills the team shares, and <code>.claude/skills/</code> in your user folder (on Windows, <code>C:\Users\&lt;you&gt;\.claude\skills\</code>) for your personal ones. A project skill sits in git next to the PBIP files, so everyone on the team gets the same standards, and changes to them are reviewed like any other change.</p>
+</section>
+
+<section class="ch" id="loading">
+  <div class="sh"><div class="num">1.3</div>
+  <div class="bricks" aria-label="The idea so far: piece 2 of 7"><span class="have">Skill</span><span class="now">Description</span><span>References</span><span>Scripts</span><span>Hooks</span><span>Sub-agents</span><span>Learning</span></div>
+  <h3>The description decides when a skill is used</h3>
+  <p class="lead">At the start of a conversation the agent sees only each skill's name and description. It reads the instructions only when a task matches the description.</p></div>
+  <figure>
+    <div class="draw">
+    <svg viewBox="0 0 680 196" role="img" aria-label="Three levels of what the agent reads. Always: the name and description of every skill, here model-standards, dax-tests, report-review and deploy. When a task matches: the SKILL.md instructions of model-standards. When the task needs it: references/dax-style.md, and only the result of a script.">
+      <text x="10" y="34" class="d-tb">Always</text>
+      <text x="10" y="51" class="d-tm">name and description</text>
+      <rect x="200" y="16" width="110" height="44" rx="5" class="d-box"/><text x="255" y="43" text-anchor="middle" class="d-t">model-standards</text>
+      <rect x="320" y="16" width="110" height="44" rx="5" class="d-box"/><text x="375" y="43" text-anchor="middle" class="d-t">dax-tests</text>
+      <rect x="440" y="16" width="110" height="44" rx="5" class="d-box"/><text x="495" y="43" text-anchor="middle" class="d-t">report-review</text>
+      <rect x="560" y="16" width="110" height="44" rx="5" class="d-box"/><text x="615" y="43" text-anchor="middle" class="d-t">deploy</text>
+      <line x1="10" y1="76" x2="670" y2="76" class="d-axis"/>
+      <text x="10" y="102" class="d-tb">When a task matches</text>
+      <text x="10" y="119" class="d-tm">the instructions</text>
+      <rect x="200" y="84" width="230" height="44" rx="5" class="d-under"/><text x="315" y="111" text-anchor="middle" class="d-t">model-standards: SKILL.md</text>
+      <line x1="10" y1="144" x2="670" y2="144" class="d-axis"/>
+      <text x="10" y="170" class="d-tb">When the task needs it</text>
+      <text x="10" y="187" class="d-tm">extra files</text>
+      <rect x="200" y="152" width="230" height="44" rx="5" class="d-box"/><text x="315" y="179" text-anchor="middle" class="d-t">references/dax-style.md</text>
+      <rect x="440" y="152" width="230" height="44" rx="5" class="d-box"/><text x="555" y="179" text-anchor="middle" class="d-t">a script's result (1.5)</text>
+    </svg>
+    </div>
+    <figcaption>What the agent reads, and when. Every skill's description is always in view; the rest is read only when a task calls for it.</figcaption>
+  </figure>
+  <p>Whether a task matches is the agent's own judgement, made by reading the descriptions, not a keyword search. This is why you can install many skills without filling the agent's working memory: each one costs a couple of lines until it's needed. It also makes the description the most important line in the skill. It has to say what the skill is for and when to use it, in the words people actually type: "rename", "measure", "display folder", "DAX".</p>
+  <p>A vague description such as "Helps with Power BI" fails both ways. The agent either never connects it to a task, or reaches for it on every task. When a skill isn't used, the description is almost always the reason; 2.3 shows how to test it.</p>
+  <p>You can also call a skill by name. In Claude Code, typing <code>/model-standards</code> in the chat loads it directly.</p>
+  <div class="why"><span class="t">Why not one big instruction file?</span><p>Coding agents also read a project file at the start of every conversation (CLAUDE.md in Claude Code, AGENTS.md in several others). It's the right place for the few things every task needs. Put your whole handbook there and it's read for every task, including the many that don't need it, and it crowds out the work.</p></div>
+</section>
+
+<section class="ch" id="references">
+  <div class="sh"><div class="num">1.4</div>
+  <div class="bricks" aria-label="The idea so far: piece 3 of 7"><span class="have">Skill</span><span class="have">Description</span><span class="now">References</span><span>Scripts</span><span>Hooks</span><span>Sub-agents</span><span>Learning</span></div>
+  <h3>Reference files: longer material, read only when needed</h3>
+  <p class="lead">Material that only some tasks need goes in separate files that SKILL.md points to. The agent opens a file only when the task calls for it.</p></div>
+  <p>model-standards has two reference files: <code>dax-style.md</code>, the team's DAX formatting and patterns, and <code>glossary.md</code>, the business terms with the words people use for them. SKILL.md says when to read each one, in a sentence: "For DAX style and patterns, read references/dax-style.md."</p>
+  <figure>
+    <div class="groups" role="group" aria-label="Three tasks and the files each one reads. Renaming the Customer table's columns reads only SKILL.md. Fixing the Margin % measure reads SKILL.md and dax-style.md. Describing every Sales column reads SKILL.md and glossary.md.">
+      <div><h5>"Rename the Customer columns"</h5><p class="s">a naming task</p>
+        <ul><li>SKILL.md</li></ul></div>
+      <div><h5>"Fix the Margin % measure"</h5><p class="s">a DAX task</p>
+        <ul><li>SKILL.md</li><li>dax-style.md</li></ul></div>
+      <div><h5>"Describe every Sales column"</h5><p class="s">a documentation task</p>
+        <ul><li>SKILL.md</li><li>glossary.md</li></ul></div>
+    </div>
+    <figcaption>Same skill, three tasks. Each task reads SKILL.md, plus only the reference file it needs.</figcaption>
+  </figure>
+  <p>A good rule: SKILL.md holds what every task under the skill needs, and stays short, a few hundred lines at most. Everything else goes in a reference file, one topic per file, linked directly from SKILL.md rather than from another reference file, so the agent always knows where to look.</p>
+</section>
+
+<section class="ch" id="scripts">
+  <div class="sh"><div class="num">1.5</div>
+  <div class="bricks" aria-label="The idea so far: piece 4 of 7"><span class="have">Skill</span><span class="have">Description</span><span class="have">References</span><span class="now">Scripts</span><span>Hooks</span><span>Sub-agents</span><span>Learning</span></div>
+  <h3>Scripts: checks that don't depend on judgement</h3>
+  <p class="lead">Some checks shouldn't be left to the agent. A script in the skill does them the same way every time, and the agent reads only the result.</p></div>
+  <p>model-standards has a script, <code>check_names.py</code>, that reads the model's TMDL files and lists every name that breaks the standard and every measure without a description. The skill tells the agent to run it before finishing.</p>
+  <figure>
+    <div class="draw">
+    <svg viewBox="0 0 680 190" role="img" aria-label="check_names.py reads the TMDL files and gives one of two results. No problems found: the agent can finish. Or a list of problems, such as cust_id having an underscore and Margin % having no description: the agent fixes them and runs the script again.">
+      <defs><marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="d-head"/></marker></defs>
+      <rect x="10" y="66" width="160" height="56" rx="6" class="d-under"/>
+      <text x="90" y="91" text-anchor="middle" class="d-tb">check_names.py</text>
+      <text x="90" y="108" text-anchor="middle" class="d-tm">reads the TMDL files</text>
+      <polyline points="170,94 205,94 205,40 238,40" class="d-line" marker-end="url(#a5)"/>
+      <polyline points="170,94 205,94 205,140 238,140" class="d-line" marker-end="url(#a5)"/>
+      <rect x="240" y="14" width="430" height="54" rx="6" class="d-panel"/>
+      <text x="256" y="37" class="d-tb">No problems found</text>
+      <text x="256" y="55" class="d-tm">The agent can finish.</text>
+      <rect x="240" y="96" width="430" height="84" rx="6" class="d-panel"/>
+      <text x="256" y="119" class="d-tb">2 problems</text>
+      <text x="256" y="137" class="d-tm">Customer.tmdl: column 'cust_id' has an underscore</text>
+      <text x="256" y="153" class="d-tm">Sales.tmdl: measure 'Margin %' has no description</text>
+      <text x="256" y="171" class="d-t">The agent fixes them and runs the script again.</text>
+    </svg>
+    </div>
+    <figcaption>One script, two outcomes. Only the short result enters the agent's working memory, never the files the script read.</figcaption>
+  </figure>
+  <p>An agent reading 400 column names will miss a few. A script won't, and it costs the agent almost nothing: the script reads the files, and the agent reads a short list. The script here is a small Python program, so Python has to be installed; 2.4 has the whole script. Anything you can check exactly, such as formatting rules, is a candidate for a script.</p>
+  <p>A script is still something the agent <em>chooses</em> to run, because the instructions ask it to. Usually that's enough. When it must happen every time, without exception, you need the next piece.</p>
+</section>
+
+<section class="ch" id="hooks">
+  <div class="sh"><div class="num">1.6</div>
+  <div class="bricks" aria-label="The idea so far: piece 5 of 7"><span class="have">Skill</span><span class="have">Description</span><span class="have">References</span><span class="have">Scripts</span><span class="now">Hooks</span><span>Sub-agents</span><span>Learning</span></div>
+  <h3>Hooks: guardrails the agent can't skip</h3>
+  <p class="lead">A <strong>hook</strong> is a command the harness runs automatically before or after an action. The agent can't skip it, because the agent isn't the one running it.</p></div>
+  <figure>
+    <div class="draw">
+    <svg viewBox="0 0 680 176" role="img" aria-label="Every tool call from the agent passes a hook before it reaches the Power BI MCP server. A call to Sales [Dev] is allowed through. A call to Sales [Prod] is blocked, and the hook's message goes back to the agent.">
+      <defs><marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="d-head"/></marker></defs>
+      <rect x="10" y="60" width="130" height="56" rx="6" class="d-box"/>
+      <text x="75" y="85" text-anchor="middle" class="d-tb">Coding agent</text>
+      <text x="75" y="102" text-anchor="middle" class="d-tm">calls the model</text>
+      <rect x="200" y="60" width="140" height="56" rx="6" class="d-under"/>
+      <text x="270" y="85" text-anchor="middle" class="d-tb">Hook</text>
+      <text x="270" y="102" text-anchor="middle" class="d-tm">checks every call</text>
+      <line x1="140" y1="88" x2="198" y2="88" class="d-line" marker-end="url(#a6)"/>
+      <polyline points="340,88 380,88 380,36 418,36" class="d-line" marker-end="url(#a6)"/>
+      <polyline points="340,88 380,88 380,140 418,140" class="d-dash" marker-end="url(#a6)"/>
+      <rect x="420" y="12" width="250" height="48" rx="6" class="d-box"/>
+      <text x="436" y="33" class="d-tb">Sales [Dev]</text>
+      <text x="436" y="50" class="d-tm">allowed through</text>
+      <rect x="420" y="116" width="250" height="48" rx="6" class="d-box"/>
+      <text x="436" y="137" class="d-tb">&#10005; Sales [Prod]: blocked</text>
+      <text x="436" y="154" class="d-tm">your message goes back to the agent</text>
+    </svg>
+    </div>
+    <figcaption>A guardrail on every call to the model. The dashed line is a call that never arrives.</figcaption>
+  </figure>
+  <p>Two hooks that fit Power BI work well:</p>
+  <ul>
+    <li><strong>Before</strong> any call to the Power BI MCP server, block it if it's aimed at the production model, the only way the agent can reach production. The agent gets your message, "Sales [Prod] is production; work on Sales [Dev]", and carries on there.</li>
+    <li><strong>After</strong> any file change, run check_names.py and give the agent the result. It runs after every file edit, checks only the file that was just edited, and ignores anything that isn't TMDL. Now the hook runs the check from 1.5 after every change; the line in SKILL.md stays as a backup for harnesses without hooks.</li>
+  </ul>
+  <div class="table"><table>
+    <thead><tr><th>Written as</th><th>Example</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td>An instruction in a skill</td><td>"Never change the production model."</td><td>The agent follows it almost always.</td></tr>
+      <tr><td>A hook</td><td>Block calls aimed at Sales [Prod].</td><td>Enforced every time.</td></tr>
+    </tbody>
+  </table></div>
+  <p>Use both: the instruction tells the agent why, so it doesn't keep trying, and the hook makes sure. Hooks aren't part of the open skills standard. They're a feature of the harness, set up in its settings files; 2.5 shows Claude Code's version.</p>
+</section>
+
+<section class="ch" id="subagents">
+  <div class="sh"><div class="num">1.7</div>
+  <div class="bricks" aria-label="The idea so far: piece 6 of 7"><span class="have">Skill</span><span class="have">Description</span><span class="have">References</span><span class="have">Scripts</span><span class="have">Hooks</span><span class="now">Sub-agents</span><span>Learning</span></div>
+  <h3>Sub-agents: split the work, keep the main conversation clear</h3>
+  <p class="lead">A <strong>sub-agent</strong> is a second agent with its own, empty working memory. The main agent gives it one job and gets back a short answer.</p></div>
+  <p>Empty means it starts without the main conversation, not without skills: when you describe a sub-agent, you can give it the skills it needs (2.6), so every sub-agent works to the same standard.</p>
+  <figure>
+    <div class="draw">
+    <svg viewBox="0 0 680 236" role="img" aria-label="The main agent gives one job per table to four sub-agents, for Customer, Product, Date and Sales. Each edits only its own table's TMDL file and sends back a three-line summary.">
+      <defs><marker id="a7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="d-head"/></marker></defs>
+      <rect x="10" y="90" width="140" height="56" rx="6" class="d-box"/>
+      <text x="80" y="115" text-anchor="middle" class="d-tb">Main agent</text>
+      <text x="80" y="132" text-anchor="middle" class="d-tm">one job per table</text>
+      <text x="80" y="172" text-anchor="middle" class="d-tk">&#8592; 4 short summaries</text>
+      <line x1="150" y1="118" x2="248" y2="34" class="d-line" marker-end="url(#a7)"/>
+      <line x1="150" y1="118" x2="248" y2="90" class="d-line" marker-end="url(#a7)"/>
+      <line x1="150" y1="118" x2="248" y2="146" class="d-line" marker-end="url(#a7)"/>
+      <line x1="150" y1="118" x2="248" y2="202" class="d-line" marker-end="url(#a7)"/>
+      <rect x="250" y="12" width="190" height="44" rx="6" class="d-under"/><text x="266" y="39" class="d-t">Sub-agent: Customer</text>
+      <rect x="250" y="68" width="190" height="44" rx="6" class="d-under"/><text x="266" y="95" class="d-t">Sub-agent: Product</text>
+      <rect x="250" y="124" width="190" height="44" rx="6" class="d-under"/><text x="266" y="151" class="d-t">Sub-agent: Date</text>
+      <rect x="250" y="180" width="190" height="44" rx="6" class="d-under"/><text x="266" y="207" class="d-t">Sub-agent: Sales</text>
+      <text x="460" y="39" class="d-tm">edits Customer.tmdl only</text>
+      <text x="460" y="95" class="d-tm">edits Product.tmdl only</text>
+      <text x="460" y="151" class="d-tm">edits Date.tmdl only</text>
+      <text x="460" y="207" class="d-tm">edits Sales.tmdl only</text>
+    </svg>
+    </div>
+    <figcaption>One job per table, in parallel. Each sub-agent sends back a three-line summary, so the main agent's working memory holds four summaries, not four tables' worth of detail.</figcaption>
+  </figure>
+  <p>There are two ways to use them with skills:</p>
+  <ul>
+    <li><strong>Fan out.</strong> To get the Sales model ready for AI, one sub-agent per table writes descriptions and sets display folders, all at the same time, each following model-standards. Because PBIP keeps each table in its own TMDL file, they never edit the same file.</li>
+    <li><strong>Run a skill as a sub-agent.</strong> A skill that reads every measure in the model produces a lot of detail you don't need afterwards. Run as a sub-agent, that reading happens out of the main conversation, and only the conclusion comes back. In Claude Code, the line <code>context: fork</code> in the skill's header does this.</li>
+  </ul>
+  <p>Fanning out helps when the pieces are independent, like tables getting descriptions. It hurts when they depend on each other, like measures that reference other measures, or relationships between tables. Then several agents working at once just make the same mistake several times, faster. Do that work in one place.</p>
+</section>
+
+<section class="ch" id="learning">
+  <div class="sh"><div class="num">1.8</div>
+  <div class="bricks" aria-label="The idea so far: piece 7 of 7"><span class="have">Skill</span><span class="have">Description</span><span class="have">References</span><span class="have">Scripts</span><span class="have">Hooks</span><span class="have">Sub-agents</span><span class="now">Learning</span></div>
+  <h3>A skill that learns, with you deciding</h3>
+  <p class="lead">At the end of a task, the agent proposes changes to the skill: a convention it met that isn't written down, or a mistake it shouldn't make again. You decide what goes in.</p></div>
+  <figure>
+    <div class="pipe" style="grid-template-columns: repeat(4, minmax(0, 1fr));" role="group" aria-label="The learning loop in four steps: a task is done; the agent proposes additions to the skill; you approve or reject each one; the skill is updated in git. The next task starts with the better skill.">
+      <div><b>Task done</b>Descriptions for the Sales table.</div>
+      <div class="sub"><b>Agent proposes</b>"Finance says net sales, never revenue. Add to glossary.md?"</div>
+      <div><b>You decide</b>Approve one proposal, reject the other.</div>
+      <div><b>Skill updated</b>A commit in git, reviewed like any change.</div>
+    </div>
+    <p class="loopback">&#8634; back to step 1 with the next task</p>
+    <figcaption>The learning loop. The next task starts with a slightly better skill, and every change to it can be traced and undone.</figcaption>
+  </figure>
+  <p>It takes no special feature, only a section in SKILL.md: "After each task, list conventions you met that aren't in this skill, and mistakes you corrected. Propose additions to the right reference file. Don't change the skill until I approve."</p>
+  <p>The same idea gives you documentation as you go. A file such as <code>references/decisions.md</code> collects decisions with the reason for each, such as "Net Sales excludes returns, agreed with finance on 3 November". The agent adds to it when a decision is made and reads it when the question comes up again.</p>
+  <div class="why"><span class="t">Why a person decides</span><p>A skill that rewrites itself unattended drifts. One wrong lesson, such as a rule learned from a one-off exception, then gets applied to every model the team builds. Keeping the skill in git and approving each change keeps it the team's standard, not the agent's.</p></div>
+</section>
+
+<section class="ch" id="picture">
+  <div class="sh"><div class="num">1.9</div>
+  <h3>The whole picture</h3>
+  <p class="lead">One request, "get the Sales model ready for AI", uses every piece. Here is where each one comes in.</p></div>
+  <figure>
+    <div class="table"><table class="flow">
+      <thead><tr><th>Step</th><th>What happens</th><th>Piece</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>The request matches the description of model-standards, so its SKILL.md is read.</td><td class="nw">Skill, description</td></tr>
+        <tr><td>2</td><td>The task is documentation, so the agent also opens glossary.md.</td><td class="nw">References</td></tr>
+        <tr><td>3</td><td>The main agent gives one table to each sub-agent.</td><td class="nw">Sub-agents</td></tr>
+        <tr><td>4</td><td>Every call through the MCP server passes the hook; production is blocked.</td><td class="nw">Hooks</td></tr>
+        <tr><td>5</td><td>After each change, a hook runs check_names.py, and the agent fixes what it lists.</td><td class="nw">Scripts, hooks</td></tr>
+        <tr><td>6</td><td>The agent proposes two additions to the skill; you approve one.</td><td class="nw">Learning</td></tr>
+      </tbody>
+    </table></div>
+    <figcaption>One request, from start to finish. The agent decides on steps 1, 2, 3 and 6; the harness runs the hooks in steps 4 and 5 regardless.</figcaption>
+  </figure>
+  <h4>The seven pieces, in one line each</h4>
+  <ol class="keep">
+    <li><strong>Skill</strong>: a folder with SKILL.md, your instructions in plain text.</li>
+    <li><strong>Description</strong>: always visible to the agent, and it decides when the skill is used.</li>
+    <li><strong>References</strong>: longer material, read only by tasks that need it.</li>
+    <li><strong>Scripts</strong>: exact checks; the agent reads only the result.</li>
+    <li><strong>Hooks</strong>: guardrails the harness runs on every action, which the agent can't skip.</li>
+    <li><strong>Sub-agents</strong>: separate working memory for separate jobs, in parallel when they're independent.</li>
+    <li><strong>Learning</strong>: the agent proposes changes to the skill, and you approve them.</li>
+  </ol>
+  <p>That's the whole idea. Chapter 2 builds it, one task at a time.</p>
+</section>
+
+<!-- ================= CHAPTER 2 ================= -->
+<div class="partopen">
+  <div class="k">Chapter 2</div>
+  <h2>Doing it</h2>
+  <p>Seven tasks, in the order you'd do them, all on the Sales model. Each has the same shape: when to use it, what you need, the steps, and how you know it's done. 2.1 is for whoever sets up the tools; everyone else can start at 2.2.</p>
+  <ol>
+    <li><span>2.1</span>Set up once</li><li><span>2.2</span>Write your first skill</li><li><span>2.3</span>Check that it's used</li><li><span>2.4</span>Add a check script</li>
+    <li><span>2.5</span>Add a guardrail</li><li><span>2.6</span>Get a model ready for AI</li><li><span>2.7</span>Let the skill learn</li>
+  </ol>
+</div>
+
+<section class="ch" id="setup">
+  <div class="num">2.1</div>
+  <h3>Set up once</h3>
+  <dl class="task">
+    <dt>Use this when</dt><dd>You're starting, or a new colleague joins the project.</dd>
+    <dt>You need</dt><dd>VS Code with a coding agent (the examples use Claude Code), Power BI Desktop, git, and Python for the scripts.</dd>
+    <dt>Steps</dt><dd><ol class="steps">
+      <li><div>Save the report as a Power BI project: in Power BI Desktop, <b>File → Save as</b>, choose the <b>.pbip</b> type, with the TMDL format switched on. The model now lives in <code>Sales.SemanticModel/definition/</code>, one TMDL file per table.</div></li>
+      <li><div>Put the project folder in git, so every change the agent makes can be reviewed and undone.</div></li>
+      <li><div>Add a Power BI MCP server to the coding agent, for example Microsoft's Power BI modelling MCP server, following its own setup guide. You give the server a name when you add it (in Claude Code, the name in <code>claude mcp add &lt;name&gt; …</code>); note it, because the hook in 2.5 uses it.</div></li>
+      <li><div>Create the skills folder in the project: <code>.claude/skills/</code>.</div></li>
+    </ol></dd>
+    <dt>Done when</dt><dd>You ask the agent "Which tables are in the Sales model?" and it answers by calling the MCP server, not by guessing from file names.</dd>
+  </dl>
+</section>
+
+<section class="ch" id="write">
+  <div class="num">2.2</div>
+  <h3>Write your first skill</h3>
+  <dl class="task">
+    <dt>Use this when</dt><dd>You catch yourself explaining the same standard to the agent twice.</dd>
+    <dt>You need</dt><dd>The project from 2.1, and your team's standard, even if it's only in people's heads.</dd>
+    <dt>Steps</dt><dd><ol class="steps">
+      <li><div>Create <code>.claude/skills/model-standards/SKILL.md</code>.</div></li>
+      <li><div>Write the header: a name in lowercase with hyphens, and a description that says what the skill covers and when to use it, with the words people type (the template is in 3.1).</div></li>
+      <li><div>Write five to ten rules, the ones you'd tell a new colleague on day one. Give an example with each rule; "Customer, not DimCustomer" teaches more than "no prefixes".</div></li>
+      <li><div>Move anything long, such as the DAX style guide, into <code>references/</code>, and start <code>references/glossary.md</code> with the business terms and the words people use for them (2.6 needs it). Add one sentence to SKILL.md for each file, saying when to read it.</div></li>
+      <li><div>Commit the skill to git.</div></li>
+    </ol></dd>
+    <dt>Done when</dt><dd>The checks in 2.3 pass.</dd>
+  </dl>
+</section>
+
+<section class="ch" id="trigger">
+  <div class="num">2.3</div>
+  <h3>Check that it's used</h3>
+  <dl class="task">
+    <dt>Use this when</dt><dd>You've written or changed a description, or a skill isn't being used when you expect it.</dd>
+    <dt>You need</dt><dd>A few requests that should use the skill, and a few that shouldn't.</dd>
+    <dt>Steps</dt><dd><ol class="steps">
+      <li><div>Write down five requests that should use the skill and three that shouldn't, in the words people really use:
+      <div class="table"><table>
+        <thead><tr><th>Request</th><th>Should use model-standards?</th></tr></thead>
+        <tbody>
+          <tr><td>"Rename the columns in Customer to our standard"</td><td class="yes">yes</td></tr>
+          <tr><td>"Add a measure for margin percentage"</td><td class="yes">yes</td></tr>
+          <tr><td>"Put the date measures in a display folder"</td><td class="yes">yes</td></tr>
+          <tr><td>"Tidy up the column names in Product"</td><td class="yes">yes</td></tr>
+          <tr><td>"Write descriptions for the Sales measures"</td><td class="yes">yes</td></tr>
+          <tr><td>"Why is this report page slow?"</td><td class="no">no</td></tr>
+          <tr><td>"Write a commit message for these changes"</td><td class="no">no</td></tr>
+          <tr><td>"Set up the gateway for scheduled refresh"</td><td class="no">no</td></tr>
+        </tbody>
+      </table></div></div></li>
+      <li><div>Try each request in a new conversation, and watch whether the agent reads the skill. Claude Code says so in the chat when it loads a skill.</div></li>
+      <li><div>If a "yes" request didn't use it, add that request's words to the description. If a "no" request did, say more precisely what the skill is for.</div></li>
+    </ol></dd>
+    <dt>Done when</dt><dd>All the "yes" requests use the skill and none of the "no" requests do.</dd>
+  </dl>
+</section>
+
+<section class="ch" id="addscript">
+  <div class="num">2.4</div>
+  <h3>Add a check script</h3>
+  <dl class="task">
+    <dt>Use this when</dt><dd>A rule can be checked exactly, and the agent sometimes misses it.</dd>
+    <dt>You need</dt><dd>The skill from 2.2, and Python.</dd>
+    <dt>Steps</dt><dd><ol class="steps">
+      <li><div>Save the script as <code>.claude/skills/model-standards/scripts/check_names.py</code>. It checks two rules: no underscores in names, and a description (a <code>///</code> line above it in TMDL) on every measure.
+<pre><code>import json, pathlib, re, sys
+
+def check(file):
+    problems = []
+    lines = file.read_text(encoding="utf-8").splitlines()
+    for i, line in enumerate(lines):
+        m = re.match(r"\s*(table|column|measure)\s+('([^']+)'|[^\s=]+)", line)
+        if not m:
+            continue
+        kind, name = m.group(1), m.group(3) or m.group(2)
+        if "_" in name:
+            problems.append(f"{file.name}: {kind} '{name}' has an underscore")
+        if kind == "measure" and not lines[i - 1].strip().startswith("///"):
+            problems.append(f"{file.name}: measure '{name}' has no description")
+    return problems
+
+if "--hook" in sys.argv:  # run by a hook (2.5): check only the file just edited
+    edited = json.load(sys.stdin).get("tool_input", {}).get("file_path", "")
+    if edited.endswith(".tmdl") and pathlib.Path(edited).exists():
+        problems = check(pathlib.Path(edited))
+        if problems:
+            print("\n".join(problems), file=sys.stderr)  # shown to the agent
+            sys.exit(2)
+    sys.exit(0)
+
+folders = [pathlib.Path(a) for a in sys.argv[1:]]
+folders = folders or list(pathlib.Path(".").glob("*.SemanticModel"))
+problems = [p for folder in folders
+            for f in sorted(folder.rglob("*.tmdl")) for p in check(f)]
+print("\n".join(problems) or "No problems found")</code></pre></div></li>
+      <li><div>Run it once yourself from the project folder: <code>python .claude/skills/model-standards/scripts/check_names.py</code>. Expect a list on an existing model; that's the work ahead. Then add a section to SKILL.md: "Before you finish, run scripts/check_names.py and fix everything it reports."</div></li>
+    </ol></dd>
+    <dt>Done when</dt><dd>You give a column a name with an underscore, ask the agent to tidy the table, and it runs the script and fixes the name without being told.</dd>
+  </dl>
+</section>
+
+<section class="ch" id="addhook">
+  <div class="num">2.5</div>
+  <h3>Add a guardrail</h3>
+  <dl class="task">
+    <dt>Use this when</dt><dd>A rule must hold every time, such as never touching production. Claude Code's version is shown; other harnesses have their own.</dd>
+    <dt>You need</dt><dd>The MCP server's name from 2.1 (here <code>powerbi-modeling</code>) and the name that identifies the production model in the agent's calls (here <code>Sales [Prod]</code>). To see how your server names models, ask the agent to connect to Sales [Dev] and look at the call in the chat; production is named the same way.</dd>
+    <dt>Steps</dt><dd><ol class="steps">
+      <li><div>Save the guardrail as <code>.claude/hooks/no_production.py</code>. It reads the call the agent is about to make, and blocks it if the production model's name is in it. If your MCP server identifies models by an ID, check for the ID instead:
+<pre><code>import json, sys
+
+call = json.load(sys.stdin)
+if "Sales [Prod]" in json.dumps(call.get("tool_input", {})):
+    print("Blocked: Sales [Prod] is production. Work on Sales [Dev].",
+          file=sys.stderr)
+    sys.exit(2)  # 2 means: block the call, show the message to the agent</code></pre></div></li>
+      <li><div>Register both hooks in <code>.claude/settings.json</code>, the guardrail before every call to the MCP server, and the name check after every file edit. Claude Code names an MCP server's tools <code>mcp__&lt;server&gt;__&lt;tool&gt;</code>, so the first matcher catches every tool of that server. Commit both files, so the guardrail applies to everyone on the project:
+<pre><code>{
+  "hooks": {
+    "PreToolUse": [{ "matcher": "mcp__powerbi-modeling__.*",
+      "hooks": [{ "type": "command", "command": "python .claude/hooks/no_production.py" }] }],
+    "PostToolUse": [{ "matcher": "Edit|Write",
+      "hooks": [{ "type": "command", "command":
+        "python .claude/skills/model-standards/scripts/check_names.py --hook" }] }]
+  }
+}</code></pre></div></li>
+    </ol></dd>
+    <dt>Done when</dt><dd>You ask the agent to connect to Sales [Prod], and it's stopped with your message and offers to work on Sales [Dev] instead.</dd>
+  </dl>
+</section>
+
+<section class="ch" id="aiready">
+  <div class="num">2.6</div>
+  <h3>Get a model ready for AI, with sub-agents</h3>
+  <dl class="task">
+    <dt>Use this when</dt><dd>Many tables need the same independent work, here descriptions and display folders, so Copilot and data agents understand the model.</dd>
+    <dt>You need</dt><dd>The skill with glossary.md, the script, and the guardrail from 2.2 to 2.5.</dd>
+    <dt>Steps</dt><dd><ol class="steps">
+      <li><div>Describe the sub-agent in <code>.claude/agents/table-documenter.md</code>. The <code>skills</code> line gives it model-standards from the start:
+<pre><code>---
+name: table-documenter
+description: Documents one table of a Power BI semantic model.
+tools: Read, Edit, Grep, Glob
+skills: model-standards
+---
+You document one table of a PBIP semantic model. Edit only that
+table's TMDL file. Give every column and measure a one-sentence
+description in business words from glossary.md, and a display
+folder. Reply in three lines: what you added, what was unclear,
+and any names that break the standard.</code></pre></div></li>
+      <li><div>Ask the main agent: "Use table-documenter on every table in Sales.SemanticModel, in parallel, and summarise what was unclear." The hook from 2.5 runs check_names.py after every edit, the sub-agents' edits too.</div></li>
+      <li><div>Read the result as a git diff, table by table. Where a sub-agent said something was unclear, decide and add the answer to glossary.md.</div></li>
+    </ol></dd>
+    <dt>Done when</dt><dd>check_names.py reports no problems, you've read every description in the diff, and the unclear points are answered in glossary.md.</dd>
+  </dl>
+  <p>Descriptions and display folders are the part that lives in TMDL. Power BI's own tools for preparing a model for Copilot, such as AI instructions and verified answers, are set up in Power BI and aren't covered here.</p>
+</section>
+
+<section class="ch" id="learn">
+  <div class="num">2.7</div>
+  <h3>Let the skill learn</h3>
+  <dl class="task">
+    <dt>Use this when</dt><dd>The skill works, and you want it to get better with every task instead of only when someone remembers to update it.</dd>
+    <dt>You need</dt><dd>The skill in git.</dd>
+    <dt>Steps</dt><dd><ol class="steps">
+      <li><div>Add a section to SKILL.md:
+<pre><code>## After each task
+List conventions you met that aren't in this skill, and mistakes
+you corrected. Propose each as an addition to the right reference
+file, with one example. Add agreed decisions to
+references/decisions.md with the date and the reason.
+Don't change this skill until I approve.</code></pre></div></li>
+      <li><div>After a task, read the proposals. Approve the ones that are true for the team, not only for this model.</div></li>
+      <li><div>Let the agent make the approved changes, and commit them with a message that says what was learned.</div></li>
+    </ol></dd>
+    <dt>Done when</dt><dd>The skill has a change in git that came from a proposal you approved, and decisions.md has its first entry.</dd>
+  </dl>
+</section>
+
+<!-- ================= CHAPTER 3 ================= -->
+<div class="partopen">
+  <div class="k">Chapter 3</div>
+  <h2>Look it up</h2>
+  <p>Templates, what's standard and what isn't, the safety notes, and the words used in this guide.</p>
+  <ol>
+    <li><span>3.1</span>The one-page card</li><li><span>3.2</span>What works where</li><li><span>3.3</span>Before you rely on it</li><li><span>3.4</span>Words</li>
+  </ol>
+</div>
+
+<section class="ch" id="card">
+  <div class="num">3.1</div>
+  <h3>The one-page card</h3>
+  <div class="card">
+    <h4>A skill's folder</h4>
+<pre><code>.claude/skills/model-standards/
+  SKILL.md              <span class="c">the header and instructions (required)</span>
+  references/
+    dax-style.md        <span class="c">read for DAX tasks</span>
+    glossary.md         <span class="c">business words, read for documentation</span>
+    decisions.md        <span class="c">decisions with their reasons</span>
+  scripts/
+    check_names.py      <span class="c">exact checks; the agent reads the result</span></code></pre>
+    <h4>SKILL.md template</h4>
+<pre><code>---
+name: model-standards
+description: &lt;What it covers&gt;. Use when &lt;the tasks, in the words
+  people type&gt;.
+---
+# &lt;Title&gt;
+&lt;Rules, each with an example.&gt;
+For &lt;topic&gt;, read references/&lt;file&gt;.md.
+
+## Before you finish
+Run scripts/&lt;check&gt;.py and fix what it reports.
+
+## After each task
+Propose additions to this skill. Don't change it until I approve.</code></pre>
+    <p>Optional in Claude Code: add <code>context: fork</code> under the description to run the skill as a sub-agent (1.7).</p>
+    <h4>Hook settings (Claude Code)</h4>
+<pre><code>"PreToolUse": [{
+  "matcher": "mcp__&lt;server&gt;__.*",
+  "hooks": [{ "type": "command", "command": "&lt;guardrail&gt;" }] }],
+"PostToolUse": [{
+  "matcher": "Edit|Write",
+  "hooks": [{ "type": "command", "command": "&lt;check&gt;" }] }]</code></pre>
+    <p>A hook command that exits with code 2 blocks the call (before) or shows its message to the agent (after).</p>
+  </div>
+</section>
+
+<section class="ch" id="where">
+  <div class="num">3.2</div>
+  <h3>What works where</h3>
+  <p class="lead">The skill folder is an open standard. Hooks, sub-agents and running a skill as a sub-agent belong to the harness, and differ between harnesses.</p>
+  <div class="table"><table>
+    <thead><tr><th>Piece</th><th>Defined by</th><th>In Claude Code</th></tr></thead>
+    <tbody>
+      <tr><td>Name and description</td><td>Open standard</td><td>The SKILL.md header</td></tr>
+      <tr><td>Instructions, references, scripts</td><td>Open standard</td><td>The skill's folder</td></tr>
+      <tr><td>Calling a skill by name</td><td>The harness</td><td><code>/model-standards</code></td></tr>
+      <tr><td>Hooks</td><td>The harness</td><td><code>.claude/settings.json</code>; a skill can also bring its own hooks in its header</td></tr>
+      <tr><td>Sub-agents</td><td>The harness</td><td><code>.claude/agents/&lt;name&gt;.md</code>, with <code>skills:</code> to give it skills</td></tr>
+      <tr><td>A skill run as a sub-agent</td><td>The harness</td><td><code>context: fork</code> in the skill's header</td></tr>
+      <tr><td>Learning loop</td><td>Instructions only</td><td>Works in any harness</td></tr>
+    </tbody>
+  </table></div>
+  <p>Check your harness's documentation for the current names; the harness-specific parts change faster than the standard.</p>
+</section>
+
+<section class="ch" id="safety">
+  <div class="num">3.3</div>
+  <h3>Before you rely on it</h3>
+  <ul>
+    <li><strong>A skill's scripts run on your computer with your access.</strong> Read a skill before you install it, the scripts especially, the way you'd read a macro from a stranger.</li>
+    <li><strong>Instructions guide, hooks enforce.</strong> If breaking a rule would cost real money or data, make it a hook.</li>
+    <li><strong>Work on a copy.</strong> Let the agent change the PBIP files or a development model, review the git diff, and publish the way you always do.</li>
+    <li><strong>The agent can be confidently wrong.</strong> A description that reads well can still describe the wrong thing. Read what goes in, especially before Copilot users rely on it.</li>
+    <li><strong>MCP servers for Power BI are young.</strong> Check which operations yours supports, and whether it's still in preview, before building a workflow on it.</li>
+  </ul>
+</section>
+
+<section class="ch" id="words">
+  <div class="num">3.4</div>
+  <h3>Words</h3>
+  <dl class="gloss">
+    <dt>Agent harness (harness)</dt><dd>The app you chat with the agent in, which runs the model, reads the skills and calls the tools, such as Claude Code, GitHub Copilot in VS Code or Cursor. It runs the hooks.</dd>
+    <dt>Coding agent</dt><dd>An AI assistant that reads files, runs commands and calls tools.</dd>
+    <dt>Description</dt><dd>The line in a skill's header that says what it's for and when to use it. Always visible to the agent (1.3).</dd>
+    <dt>Display folder</dt><dd>A folder that groups columns and measures in a table's field list.</dd>
+    <dt>Hook</dt><dd>A command the harness runs automatically before or after an action. The agent can't skip it (1.6).</dd>
+    <dt>MCP server</dt><dd>A program that gives the agent tools, through the open Model Context Protocol. A Power BI MCP server gives tools for semantic models.</dd>
+    <dt>PBIP</dt><dd>Power BI project: a report and its semantic model saved as a folder of text files.</dd>
+    <dt>Reference file</dt><dd>A file in a skill's <code>references</code> folder, read only when a task needs it (1.4).</dd>
+    <dt>Script</dt><dd>A small program in a skill's <code>scripts</code> folder that does an exact check; the agent reads only its result (1.5).</dd>
+    <dt>Skill</dt><dd>A folder with a SKILL.md file of instructions that the agent reads when a task matches its description.</dd>
+    <dt>SKILL.md</dt><dd>A skill's one required file: a header with name and description, then the instructions.</dd>
+    <dt>Sub-agent</dt><dd>A second agent with its own, empty working memory, given one job by the main agent (1.7).</dd>
+    <dt>TMDL</dt><dd>The text format of a semantic model in a PBIP project, one file per table.</dd>
+    <dt>Working memory</dt><dd>Everything the agent has read in the current conversation. Technically, the context window.</dd>
+  </dl>
+</section>
+
+</main>
+</div>
